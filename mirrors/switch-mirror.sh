@@ -61,12 +61,17 @@ edit_repos() {
         # RPM Fusion path: mirrors.*/rpmfusion/free|nonfree/fedora/...
 
         case "$(basename "$f")" in
-            fedora.repo|fedora-updates.repo|fedora-updates-testing.repo)
+            fedora.repo)
                 sed -i \
                     -e 's|^metalink=|#metalink=|' \
-                    -e 's|^#\?baseurl=http[s]*://[^/]*|baseurl=https://'"$target_host"'|' \
+                    -e 's|^#\?baseurl=.*|baseurl=https://'"$target_host"'/fedora/releases/$releasever/Everything/$basearch/os/|' \
                     "$f"
-                # If no baseurl line exists yet, add one derived from repo id
+                ;;
+            fedora-updates.repo|fedora-updates-testing.repo)
+                sed -i \
+                    -e 's|^metalink=|#metalink=|' \
+                    -e 's|^#\?baseurl=.*|baseurl=https://'"$target_host"'/fedora/updates/$releasever/Everything/$basearch/|' \
+                    "$f"
                 ;;
             rpmfusion-*.repo)
                 sed -i \
