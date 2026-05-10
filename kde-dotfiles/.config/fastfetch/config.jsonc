@@ -4,25 +4,24 @@
         "type": "small",
         "padding": { "top": 1, "right": 2 }
     },
-    "display": { "separator": "  " },
+    "display": {
+        "separator": "  "
+    },
     "modules": [
         "break",
         { "type": "title", "format": "{6}{7}{8}" },
-        {
-            "type": "custom",
-            "format": "[90m──────────────────────────────[0m"
-        },
-        { "type": "os", "key": "  OS  " },
-        { "type": "kernel", "key": "  Kernel " },
-        { "type": "host", "key": "󰌢  Host " },
-        { "type": "packages", "key": "󰏖  Pkgs " },
-        { "type": "shell", "key": "  Shell" },
-        { "type": "de", "key": "  DE   " },
-        { "type": "terminal", "key": "  Term " },
-        { "type": "cpu", "key": "  CPU  " },
-        { "type": "gpu", "key": "󰢮  GPU  " },
-        { "type": "memory", "key": "  RAM  " },
-        { "type": "disk", "key": "  Disk " },
+        { "type": "custom", "format": "────────────────────────────" },
+        { "type": "os",       "key": "OS     " },
+        { "type": "kernel",   "key": "Kernel " },
+        { "type": "host",     "key": "Host   " },
+        { "type": "packages", "key": "Pkgs   " },
+        { "type": "shell",    "key": "Shell  " },
+        { "type": "de",       "key": "DE     " },
+        { "type": "terminal", "key": "Term   " },
+        { "type": "cpu",      "key": "CPU    " },
+        { "type": "gpu",      "key": "GPU    " },
+        { "type": "memory",   "key": "RAM    " },
+        { "type": "disk",     "key": "Disk   " },
         "break"
     ]
 }
