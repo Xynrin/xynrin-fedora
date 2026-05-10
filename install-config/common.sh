@@ -55,3 +55,89 @@ need_sudo() {
     warn "sudo 凭据已过期，可能需要重新输入密码"
     sudo -v
 }
+
+# ===== 架构 / 虚拟化 / 硬件 检测 =====
+# 结果缓存，避免重复调用
+_XF_ARCH=""
+_XF_VIRT=""
+_XF_GPU=""
+_XF_VENDOR=""
+
+# CPU 架构：x86_64 / aarch64 / ...
+xf_arch() {
+    [[ -n "$_XF_ARCH" ]] || _XF_ARCH=$(uname -m)
+    printf '%s' "$_XF_ARCH"
+}
+
+# 虚拟化环境：none / kvm / vmware / oracle / microsoft / qemu / ...
+# 需要 sudo 才准？不需要，systemd-detect-virt 普通用户就能读
+xf_virt() {
+    if [[ -z "$_XF_VIRT" ]]; then
+        if command -v systemd-detect-virt >/dev/null 2>&1; then
+            _XF_VIRT=$(systemd-detect-virt 2>/dev/null || echo "none")
+        else
+            _XF_VIRT="none"
+        fi
+    fi
+    printf '%s' "$_XF_VIRT"
+}
+
+xf_is_vm() {
+    [[ "$(xf_virt)" != "none" ]]
+}
+
+# 检测 GPU 厂商：nvidia / amd / intel / none（多个时取第一个）
+xf_gpu() {
+    if [[ -z "$_XF_GPU" ]]; then
+        if command -v lspci >/dev/null 2>&1; then
+            local line
+            line=$(lspci -nn 2>/dev/null | grep -iE 'vga|3d|display' | head -1)
+            case "$line" in
+                *NVIDIA*|*nvidia*) _XF_GPU="nvidia" ;;
+                *AMD*|*ATI*|*Radeon*|*amd*) _XF_GPU="amd" ;;
+                *Intel*|*intel*) _XF_GPU="intel" ;;
+                *) _XF_GPU="none" ;;
+            esac
+        else
+            _XF_GPU="none"
+        fi
+    fi
+    printf '%s' "$_XF_GPU"
+}
+
+xf_has_nvidia() {
+    [[ "$(xf_gpu)" == "nvidia" ]]
+}
+
+# 主板厂商/产品：asus / lenovo / dell / ... / unknown
+# 走 /sys/class/dmi，不需要 sudo
+xf_vendor() {
+    if [[ -z "$_XF_VENDOR" ]]; then
+        local v=""
+        if [[ -r /sys/class/dmi/id/sys_vendor ]]; then
+            v=$(tr '[:upper:]' '[:lower:]' < /sys/class/dmi/id/sys_vendor | tr -d '[:space:]')
+        fi
+        case "$v" in
+            *asus*)    _XF_VENDOR="asus" ;;
+            *lenovo*)  _XF_VENDOR="lenovo" ;;
+            *dell*)    _XF_VENDOR="dell" ;;
+            *hp*|*hewlett*) _XF_VENDOR="hp" ;;
+            *acer*)    _XF_VENDOR="acer" ;;
+            *msi*)     _XF_VENDOR="msi" ;;
+            *apple*)   _XF_VENDOR="apple" ;;
+            "")        _XF_VENDOR="unknown" ;;
+            *)         _XF_VENDOR="$v" ;;
+        esac
+    fi
+    printf '%s' "$_XF_VENDOR"
+}
+
+xf_is_asus() {
+    [[ "$(xf_vendor)" == "asus" ]]
+}
+
+# 打印一行硬件摘要，便于 debug
+xf_hw_summary() {
+    printf 'arch=%s virt=%s gpu=%s vendor=%s\n' \
+        "$(xf_arch)" "$(xf_virt)" "$(xf_gpu)" "$(xf_vendor)"
+}

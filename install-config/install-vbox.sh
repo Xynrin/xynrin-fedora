@@ -3,6 +3,12 @@
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 log "VirtualBox 内核模块"
+
+if xf_is_vm; then
+    warn "检测到虚拟机环境 ($(xf_virt))，跳过 VirtualBox 内核模块编译"
+    exit 0
+fi
+
 need_sudo
 
 if systemctl is-active vboxdrv >/dev/null 2>&1; then

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # 通过 nvm.fish 确保 LTS 存在，按 node/npm-globals.txt 装全局 npm 包
-# 全局 npm install 通常需要 sudo（系统 npm 全局前缀在 /usr/local），
-# install.sh 在入口已经 sudo -v 过，这里的 sudo 不会再弹密码。
+# npm 操作全部通过 fish -c 执行，确保使用 nvm 管理的 node 而非系统 node。
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 log "node / nvm.fish"
@@ -27,22 +26,14 @@ pkgs_file="$SETUP_DIR/node/npm-globals.txt"
 pkgs=$(read_list "$pkgs_file")
 [[ -z "$pkgs" ]] && { dim "没有 npm 全局包要装"; exit 0; }
 
-# 判断 npm 全局前缀是否需要 sudo
-NPM_PREFIX=$(npm config get prefix 2>/dev/null || echo "/usr/local")
-NPM_SUDO=""
-if [[ "$NPM_PREFIX" == /usr* || "$NPM_PREFIX" == /opt* ]] && [[ ! -w "$NPM_PREFIX" ]]; then
-    NPM_SUDO="sudo"
-    dim "npm 全局前缀 $NPM_PREFIX 需要 sudo"
-fi
-
-installed=$(npm ls -g --depth=0 --parseable 2>/dev/null | \
-    sed -E 's|.*/node_modules/||' | sort -u)
+installed=$(fish -c 'npm ls -g --depth=0 --parseable 2>/dev/null' \
+    | sed -E 's|.*/node_modules/||' | sort -u)
 
 while read -r p; do
     [[ -z "$p" ]] && continue
     if grep -qxF "$p" <<< "$installed"; then
         dim "已安装: $p"
     else
-        run $NPM_SUDO npm install -g "$p"
+        run fish -c "npm install -g '$p'"
     fi
 done <<< "$pkgs"

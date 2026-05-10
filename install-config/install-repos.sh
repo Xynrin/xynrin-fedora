@@ -6,18 +6,40 @@ log "dnf repos（rpmfusion + 第三方 + copr）"
 need_sudo
 
 fedver=$(rpm -E %fedora)
-if ! rpm -q rpmfusion-free-release >/dev/null 2>&1; then
-    run sudo dnf install -y \
-        "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${fedver}.noarch.rpm"
-else
-    dim "rpmfusion-free 已启用"
-fi
-if ! rpm -q rpmfusion-nonfree-release >/dev/null 2>&1; then
-    run sudo dnf install -y \
-        "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${fedver}.noarch.rpm"
-else
-    dim "rpmfusion-nonfree 已启用"
-fi
+
+# 从 preferred.txt 读取镜像，用于 rpmfusion release rpm 的下载 URL
+_rpmfusion_host() {
+    local pref_file="$SETUP_DIR/mirrors/preferred.txt"
+    local mirror=""
+    [[ -f "$pref_file" ]] && mirror=$(grep -vE '^\s*(#|$)' "$pref_file" | head -1 | tr -d '[:space:]')
+    case "$mirror" in
+        tuna)   printf 'mirrors.tuna.tsinghua.edu.cn' ;;
+        ustc)   printf 'mirrors.ustc.edu.cn' ;;
+        aliyun) printf 'mirrors.aliyun.com' ;;
+        *)      printf 'mirrors.rpmfusion.org' ;;
+    esac
+}
+
+_install_rpmfusion_release() {
+    local variant="$1"   # free or nonfree
+    local pkg="rpmfusion-${variant}-release"
+    rpm -q "$pkg" >/dev/null 2>&1 && { dim "rpmfusion-${variant} 已启用"; return 0; }
+
+    local host
+    host=$(_rpmfusion_host)
+    local url="https://${host}/rpmfusion/${variant}/fedora/rpmfusion-${variant}-release-${fedver}.noarch.rpm"
+    local fallback="https://mirrors.rpmfusion.org/${variant}/fedora/rpmfusion-${variant}-release-${fedver}.noarch.rpm"
+
+    if run sudo dnf install -y "$url"; then
+        ok "rpmfusion-${variant} 已安装（via $host）"
+    elif [[ "$url" != "$fallback" ]]; then
+        warn "镜像下载失败，回退到官方 CDN"
+        run sudo dnf install -y "$fallback"
+    fi
+}
+
+_install_rpmfusion_release free
+_install_rpmfusion_release nonfree
 
 shopt -s nullglob
 for r in "$SETUP_DIR/repos"/*.repo; do

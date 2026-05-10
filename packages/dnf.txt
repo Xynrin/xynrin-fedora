@@ -48,7 +48,6 @@ gstreamer1-plugins-good
 gstreamer1-plugins-ugly-free
 
 # Utilities
-glow
 filelight
 gamemode
 nvtop
@@ -58,15 +57,3 @@ kde-connect
 
 # Browsers & editors (these come from third-party repos, install.sh adds repos first)
 code
-
-# ASUS laptop toolkit (from lukenukem/asus-linux COPR)
-asusctl
-supergfxctl
-
-# NVIDIA (from rpmfusion-nonfree)
-akmod-nvidia
-
-# 虚拟机
-akmod-VirtualBox
-kernel-devel
-VirtualBox

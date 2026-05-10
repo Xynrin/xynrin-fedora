@@ -2,9 +2,10 @@
 set fish_greeting
 
 if status is-interactive
-    # Show system info on startup (clean, won't show in tmux)
     if not set -q TMUX
-        fastfetch
+        if type -q fastfetch
+            fastfetch
+        end
     end
 end
 
@@ -32,8 +33,10 @@ else
     alias lt='ls -lhtr'
 end
 
-alias cat='bat --paging=never'
-alias batcat='bat --paging=never'
+if type -q bat
+    alias cat='bat --paging=never'
+    alias batcat='bat --paging=never'
+end
 
 alias grep='grep --color=auto'
 alias diff='diff --color=auto'
@@ -43,7 +46,11 @@ alias df='df -h'
 alias free='free -h'
 
 alias reload='exec fish'
-alias cls='clear; fastfetch'
+if type -q fastfetch
+    alias cls='clear; fastfetch'
+else
+    alias cls='clear'
+end
 
 alias ..='cd ..'
 alias ...='cd ../..'

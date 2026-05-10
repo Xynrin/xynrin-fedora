@@ -16,7 +16,23 @@ fi
 
 if ! fish -c "functions -q fisher" 2>/dev/null; then
     log "引导 fisher"
-    run fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher"
+    # raw.githubusercontent.com 在国内经常不可达，自动探测并走代理
+    _gh_raw_base="https://raw.githubusercontent.com"
+    _gh_proxy_base="https://ghfast.top/https://raw.githubusercontent.com"
+    _fisher_path="jorgebucaran/fisher/main/functions/fisher.fish"
+
+    _pick_raw_base() {
+        if curl -fsSL --max-time 5 "$_gh_raw_base/jorgebucaran/fisher/main/README.md" \
+                -o /dev/null 2>/dev/null; then
+            printf '%s' "$_gh_raw_base"
+        else
+            warn "raw.githubusercontent.com 不可达，使用 ghfast.top 代理"
+            printf '%s' "$_gh_proxy_base"
+        fi
+    }
+
+    _raw_base=$(_pick_raw_base)
+    run fish -c "curl -fsSL '$_raw_base/$_fisher_path' | source && fisher install jorgebucaran/fisher"
 fi
 
 plugins=$(read_list "$plugins_file" | xargs echo)
