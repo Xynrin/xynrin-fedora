@@ -28,6 +28,7 @@ usage() {
   vscode    settings.json + extensions
   node      nvm LTS + npm-globals.txt
   systemd   systemd/{system,user}.txt
+  vbox      VirtualBox 内核模块编译 + 服务启动
   scripts   scripts/*.sh → ~/.local/bin/<name>
 
 例:
@@ -48,7 +49,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-steps=(mirrors repos dnf flatpak fish fisher vscode node systemd scripts)
+steps=(mirrors repos dnf flatpak fish fisher vscode node systemd vbox scripts)
 
 if [[ -n "$ONLY" ]] && ! printf '%s\n' "${steps[@]}" | grep -qx "$ONLY"; then
     err "未知的 --only 值: $ONLY"
