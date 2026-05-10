@@ -67,4 +67,6 @@ supergfxctl
 akmod-nvidia
 
 # 虚拟机
+akmod-VirtualBox
+kernel-devel
 VirtualBox
