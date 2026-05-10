@@ -31,14 +31,17 @@ for rel in fish/config.fish starship.toml fastfetch/config.jsonc; do
     [[ -f "$src" ]] && backup_and_copy "$src" "$dst"
 done
 
-# 默认 shell 切成 fish
+# 默认 shell 切成 fish（默认 Y，15s 超时自动 Y）
 current_shell=$(getent passwd "$TARGET_USER" | awk -F: '{print $7}')
 fish_bin=$(command -v fish || true)
 if [[ -n "$fish_bin" && "$current_shell" != "$fish_bin" ]]; then
     if confirm "把默认 shell 切换到 fish？" Y 15; then
         need_sudo
-        exe sudo chsh -s "$fish_bin" "$TARGET_USER" \
-            && success "默认 shell 已切 fish（下次登录生效）"
+        if exe sudo chsh -s "$fish_bin" "$TARGET_USER"; then
+            success "默认 shell 已切 fish（下次登录生效）"
+        else
+            warn "chsh 失败，手动跑：sudo chsh -s $fish_bin $TARGET_USER"
+        fi
     else
         dim "保持原 shell: $current_shell"
     fi
