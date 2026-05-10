@@ -4,8 +4,13 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 log "fish 配置、函数、conf.d、插件"
 if ! command -v fish >/dev/null; then
-    err "fish 未安装，请先跑 --only dnf"
-    exit 1
+    warn "fish 未安装，自动安装"
+    need_sudo
+    run sudo dnf install -y fish
+    if ! command -v fish >/dev/null; then
+        err "fish 安装失败"
+        exit 1
+    fi
 fi
 
 dst_fns="$HOME/.config/fish/functions"
