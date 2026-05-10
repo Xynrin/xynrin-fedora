@@ -53,5 +53,28 @@ if [[ -z "${missing// /}" ]]; then
     exit 0
 fi
 dim "待装:$missing"
+
+# fisher 内部直接 curl api.github.com，国内可能不可达；不可达时临时 patch URL
+_fisher_file=$(fish -c 'echo $__fish_config_dir/functions/fisher.fish' 2>/dev/null)
+_gh_api="https://api.github.com"
+_gh_api_proxy="https://ghfast.top/https://api.github.com"
+_patched=0
+
+if [[ -f "$_fisher_file" ]] && \
+   ! curl -fsSL --max-time 5 "$_gh_api/repos/jorgebucaran/fisher" -o /dev/null 2>/dev/null; then
+    warn "api.github.com 不可达，临时使用 ghfast.top 代理安装插件"
+    cp "$_fisher_file" "${_fisher_file}.bak.$$"
+    sed -i "s|https://api.github.com|$_gh_api_proxy|g" "$_fisher_file"
+    _patched=1
+fi
+
 # shellcheck disable=SC2086
 run fish -c "fisher install$missing"
+_exit=$?
+
+if [[ $_patched -eq 1 ]]; then
+    mv "${_fisher_file}.bak.$$" "$_fisher_file"
+    dim "已还原 fisher.fish"
+fi
+
+exit $_exit
