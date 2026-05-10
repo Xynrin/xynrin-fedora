@@ -65,3 +65,6 @@ supergfxctl
 
 # NVIDIA (from rpmfusion-nonfree)
 akmod-nvidia
+
+# 虚拟机
+VirtualBox
