@@ -38,13 +38,37 @@ fi
 
 as_user_kw() { as_user "$kw" "$@"; }
 
-log "设置 Plasma 深色主题 + Papirus 图标"
+# ---- 备份：只备份本脚本会动的文件，面板布局/快捷键单独备份以防万一 ----
+backup_dir="$HOME_DIR/.config/.xynrin-backup"
+stamp=$(date +%Y%m%d-%H%M%S)
+mkdir -p "$backup_dir"
+backup_tar="$backup_dir/plasma-before-${stamp}.tar.gz"
+
+log "备份当前 Plasma 相关配置到 $backup_tar"
+(
+    cd "$HOME_DIR/.config" 2>/dev/null && \
+    tar -czf "$backup_tar" \
+        --ignore-failed-read \
+        kdeglobals \
+        plasmarc \
+        plasma-org.kde.plasma.desktop-appletsrc \
+        kwinrc \
+        plasmashellrc \
+        kglobalshortcutsrc 2>/dev/null
+) && chown "$TARGET_USER:" "$backup_tar" 2>/dev/null
+dim "回滚命令：tar -xzf '$backup_tar' -C ~/.config/"
+
+# ---- 只改色板级 key，不碰布局类文件 ----
+log "设置 Plasma 深色主题 + Papirus 图标（不改动面板/小组件/快捷键）"
 as_user_kw --file kdeglobals --group General --key ColorScheme BreezeDark || true
 as_user_kw --file kdeglobals --group KDE --key LookAndFeelPackage org.kde.breezedark.desktop || true
 as_user_kw --file kdeglobals --group Icons --key Theme Papirus-Dark || true
 
-# 通用 UI 小改进：开启左键单击打开（对小白更接近 Windows 直觉可选，这里不强制）
-# as_user_kw --file kdeglobals --group KDE --key SingleClick false || true
+# ---- 不注销即生效（命令不存在或失败都 OK）----
+log "实时应用主题（免注销）"
+as_user plasma-apply-colorscheme BreezeDark >/dev/null 2>&1 || true
+as_user plasma-apply-lookandfeel -a org.kde.breezedark.desktop >/dev/null 2>&1 || true
+as_user plasma-apply-desktoptheme breeze-dark >/dev/null 2>&1 || true
 
-success "KDE 视觉主题已配置（注销重登后完全生效）"
-dim "想进一步调：系统设置 → 全局主题 / 颜色 / 图标"
+success "KDE 视觉主题已配置"
+dim "面板布局 / 小组件 / 快捷键保持原样；想进一步调：系统设置 → 全局主题"
