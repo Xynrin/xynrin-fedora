@@ -162,17 +162,17 @@ if [[ $DRY_RUN -eq 0 ]]; then
     SUDO_KEEPALIVE_PID=$!
 fi
 
-# 前置必跑
-section "前置 [0/$total]" "配置软件源（RPM Fusion + Flathub）"
-run_script "$MANDATORY_PRE" || { error "前置失败，终止"; exit 1; }
-
-# 计算总步数
+# 计算总步数（在执行前置之前就算好，section 标题要用）
 total=0
 for m in "${MODULES[@]}"; do
     mod_id="${m%%|*}"
     [[ " $picked_trim " == *" $mod_id "* ]] && total=$((total + 1))
 done
 current=0
+
+# 前置必跑
+section "前置 [0/$total]" "配置软件源（RPM Fusion + Flathub）"
+run_script "$MANDATORY_PRE" || { error "前置失败，终止"; exit 1; }
 
 # 执行所选模块（按定义顺序）
 for m in "${MODULES[@]}"; do
