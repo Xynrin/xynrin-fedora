@@ -119,7 +119,10 @@ need_sudo() {
     sudo -v
 }
 
-# dnf_install PKG [PKG...]  — 按需装，已装的跳过
+# dnf 并发下载参数（10-repos.sh 会写入 dnf.conf 永久生效；此处命令行兜底）
+XF_DNF_OPTS="--setopt=max_parallel_downloads=10 --setopt=fastestmirror=True"
+
+# dnf_install PKG [PKG...]  — 按需装，已装的跳过，并发下载
 dnf_install() {
     local missing=()
     for p in "$@"; do
@@ -130,7 +133,8 @@ dnf_install() {
         return 0
     fi
     need_sudo
-    exe sudo dnf install -y "${missing[@]}"
+    # shellcheck disable=SC2086
+    exe sudo dnf install -y $XF_DNF_OPTS "${missing[@]}"
 }
 
 # flatpak_install APPID [APPID...] — flathub
@@ -148,13 +152,20 @@ flatpak_install() {
 }
 
 # ===== 6. dotfiles 部署 =====
-# backup_and_copy SRC DST — 先备份 DST（如存在且非同一文件），再 cp
+# 策略：保守。默认只在目标不存在时拷，避免覆盖用户现有配置。
+# 如果用户想强刷，export XF_DOTFILES_FORCE=1
+
+# backup_and_copy SRC DST — 目标已存在就跳过；不存在才拷
 backup_and_copy() {
     local src="$1" dst="$2"
     if [[ ! -e "$src" ]]; then warn "源不存在: $src"; return 1; fi
     if [[ -e "$dst" ]]; then
         if cmp -s "$src" "$dst" 2>/dev/null; then
             dim "已就位: $dst"; return 0
+        fi
+        if [[ "${XF_DOTFILES_FORCE:-0}" != "1" ]]; then
+            dim "保留宿主机配置: $dst（想强刷：XF_DOTFILES_FORCE=1）"
+            return 0
         fi
         local bak="${dst}.bak.$(date +%Y%m%d-%H%M%S)"
         exe cp -a "$dst" "$bak"
@@ -163,16 +174,18 @@ backup_and_copy() {
     exe cp -a "$src" "$dst"
 }
 
-# rsync_dotfiles SRC_DIR DST_DIR — 把 SRC_DIR 下的东西合并到 DST_DIR
-# 先备份 DST_DIR 到 DST_DIR.bak.TIMESTAMP（整体打包，小白易回滚）
+# rsync_dotfiles SRC_DIR DST_DIR — 合并 SRC 到 DST，不覆盖已存在文件（--ignore-existing）
 rsync_dotfiles() {
     local src="$1" dst="$2"
     [[ ! -d "$src" ]] && { warn "dotfiles 源目录不存在: $src"; return 1; }
     mkdir -p "$dst"
+    local ignore_flag="--ignore-existing"
+    [[ "${XF_DOTFILES_FORCE:-0}" == "1" ]] && ignore_flag="--backup --suffix=.bak.$(date +%s)"
     if command -v rsync >/dev/null 2>&1; then
-        exe rsync -a --backup --suffix=".bak.$(date +%s)" "$src/" "$dst/"
+        exe rsync -a $ignore_flag "$src/" "$dst/"
     else
-        exe cp -a "$src/." "$dst/"
+        # fallback: cp -n 不覆盖已存在
+        exe cp -an "$src/." "$dst/"
     fi
 }
 
