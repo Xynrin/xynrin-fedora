@@ -1,0 +1,2 @@
+# COPR repos to enable (one per line, format: owner/name)
+lukenukem/asus-linux

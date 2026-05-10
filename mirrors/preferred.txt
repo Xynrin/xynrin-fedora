@@ -1,0 +1,5 @@
+# Mirror set to use when `install.sh --only mirrors` is run on a fresh machine.
+# Options: tuna | ustc | aliyun | official
+# Comment the line out or set to "official" to skip mirror switching.
+
+tuna

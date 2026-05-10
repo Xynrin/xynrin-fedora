@@ -1,0 +1,5 @@
+# npm global packages installed via `npm i -g`
+# install.sh will install into the active nvm version
+@google/gemini-cli
+@openai/codex
+opencode-ai

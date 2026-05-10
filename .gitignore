@@ -1,0 +1,30 @@
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Personal / sensitive
+**/secrets/
+*.key
+*.pem
+id_rsa*
+id_ed25519*
+.env
+.env.*
+!.env.example
+
+# Local state that shouldn't be tracked
+vscode/settings.json.bak.*
+**/*.bak.*
+
+# ssh configs (may contain personal info — opt in later if desired)
+ssh/
+
+# git config (usually contains user.email)
+git/config
