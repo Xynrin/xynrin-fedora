@@ -61,7 +61,7 @@ edit_repos() {
         # RPM Fusion path: mirrors.*/rpmfusion/free|nonfree/fedora/...
 
         case "$(basename "$f")" in
-            fedora.repo|fedora-updates.repo|fedora-updates-testing.repo|fedora-cisco-openh264.repo)
+            fedora.repo|fedora-updates.repo|fedora-updates-testing.repo)
                 sed -i \
                     -e 's|^metalink=|#metalink=|' \
                     -e 's|^#\?baseurl=http[s]*://[^/]*|baseurl=https://'"$target_host"'|' \
