@@ -60,11 +60,23 @@ fi
 # ===== Banner =====
 show_banner() {
     if command -v oh-my-logo >/dev/null 2>&1; then
-        oh-my-logo "xynrin-fedora" purple 2>/dev/null || \
-        oh-my-logo "xynrin-fedora" 2>/dev/null || true
-    else
-        printf "${c_mag}${c_bold}xynrin-fedora${c_reset}\n"
+        if oh-my-logo "xynrin-fedora" purple 2>/dev/null \
+            || oh-my-logo "xynrin-fedora" 2>/dev/null; then
+            printf "${c_gray}    %s${c_reset}\n\n" "一键 Fedora KDE 工作站配置"
+            return
+        fi
     fi
+    # Fallback: 内置 ASCII art（不依赖任何工具）
+    printf "${c_mag}${c_bold}"
+    cat <<'BANNER'
+                        _         __         _
+__  ___   _ _ __  _ __(_)_ __   / _| ___  __| | ___  _ __ __ _
+\ \/ / | | | '_ \| '__| | '_ \ | |_ / _ \/ _` |/ _ \| '__/ _` |
+ >  <| |_| | | | | |  | | | | ||  _|  __/ (_| | (_) | | | (_| |
+/_/\_\\__, |_| |_|_|  |_|_| |_||_|  \___|\__,_|\___/|_|  \__,_|
+      |___/
+BANNER
+    printf "${c_reset}"
     printf "${c_gray}    %s${c_reset}\n\n" "一键 Fedora KDE 工作站配置"
 }
 

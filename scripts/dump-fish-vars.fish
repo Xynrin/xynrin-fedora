@@ -10,7 +10,10 @@ printf "%s\n" "# Applied by install.sh --only fish" >> $out
 printf "%s\n" "# Regenerate after tweaking: fish scripts/dump-fish-vars.fish" >> $out
 printf "\n" >> $out
 
-for var in (set -U --names | string match -r "^(tide_|fish_color_|fish_pager_color_|fish_greeting)")
+for var in (set -U --names)
+    if not string match -qr "^(tide_|fish_color_|fish_pager_color_|fish_greeting)" -- $var
+        continue
+    end
     set -l vals $$var
     if test (count $vals) -eq 0
         printf "set -U %s\n" $var >> $out
