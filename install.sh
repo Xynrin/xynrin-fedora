@@ -3,7 +3,8 @@
 # - 打 banner (oh-my-logo 如果可用)
 # - 一次 sudo -v + 后台守护续期，全程只问一次密码
 # - 把每一步委托给 install-config/install-<name>.sh
-
+# author: xynrin <xynrin@163.com>
+# create-time: 2026-05-10
 set -euo pipefail
 
 SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
