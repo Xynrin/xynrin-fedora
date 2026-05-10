@@ -100,5 +100,6 @@
   "update.showReleaseNotes": false,
   "explorer.confirmDragAndDrop": false,
   "explorer.confirmDelete": false,
-  "security.workspace.trust.untrustedFiles": "open"
+  "security.workspace.trust.untrustedFiles": "open",
+  "git.autofetch": true
 }
