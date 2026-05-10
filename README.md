@@ -1,27 +1,25 @@
-# fedora-setup
+# xynrin-fedora
 
 我的 Fedora KDE 工作站一键配置仓库。新机从零到可用，一条命令。
 
 ## 一键引导（新机推荐）
 
-仓库公开，直接 curl raw 即可。任何 shell 都行：
-
 **bash / zsh**
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/Xynrin/fedora-setup/main/bootstrap.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/Xynrin/xynrin-fedora/main/bootstrap.sh)
 ```
 
 **fish**
 
 ```fish
-curl -fsSL https://raw.githubusercontent.com/Xynrin/fedora-setup/main/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Xynrin/xynrin-fedora/main/bootstrap.sh | bash
 ```
 
-`bootstrap.sh` 只做三件事：装 git、克隆仓库到 `~/fedora-setup`、打印下一步命令。真正的安装 `install.sh` 需要 sudo，必须手动跑：
+`bootstrap.sh` 做三件事：装 git、克隆仓库到 `~/xynrin-fedora`、打印下一步命令。真正的安装 `install.sh` 需要 sudo，必须手动跑（不在管道里）：
 
 ```sh
-cd ~/fedora-setup
+cd ~/xynrin-fedora
 ./install.sh            # 全量
 ./install.sh --dry-run  # 或先预览
 ```
@@ -29,67 +27,59 @@ cd ~/fedora-setup
 ## 手动克隆
 
 ```sh
-git clone https://github.com/Xynrin/fedora-setup.git ~/fedora-setup
-cd ~/fedora-setup
+git clone https://github.com/Xynrin/xynrin-fedora.git ~/xynrin-fedora
+cd ~/xynrin-fedora
 ./install.sh
 ```
 
-首次执行会按顺序跑 10 个步骤。全部幂等：每步都是"先查状态，再只改需要改的"，随时可以中断再重跑。
+所有步骤幂等，先查状态再只改需要改的，中断随时可重跑。**全程只会输入一次 sudo 密码**，之后后台续期直到脚本结束。
 
 ## 布局
 
 ```
-fedora-setup/
-├── bootstrap.sh           # 在线引导脚本（curl raw 入口）
-├── install.sh             # 本地安装入口（--only STEP / --dry-run）
-├── mirrors/
-│   ├── preferred.txt      # 优先镜像 (tuna/ustc/aliyun/official)
-│   └── switch-mirror.sh   # 切换器（可单独调用）
-├── repos/
-│   ├── *.repo             # 第三方 dnf repo 文件（vscode、charm...）
-│   └── copr.txt           # 要启用的 COPR
-├── packages/
-│   ├── dnf.txt            # 要装的 rpm 包（分类有注释）
-│   └── flatpak.txt        # flatpak 应用 id
-├── fish/
-│   ├── config.fish        # 主配置（symlink 到 ~/.config/fish/）
-│   ├── fish_plugins       # fisher 插件列表
-│   ├── universal_vars.fish # tide 颜色、fish_color_* 全量还原
-│   ├── functions/         # 手写 fish 函数（serve、mkcd、killport...）
-│   └── conf.d/
-├── vscode/
-│   ├── settings.json      # symlink 到 ~/.config/Code/User/
-│   └── extensions.txt     # 扩展 id 列表
-├── kde/
-│   ├── pull.sh / push.sh  # Plasma 配置双向同步
-│   ├── files.txt          # 要纳管的 ~/.config 下 KDE 文件
-│   └── konsole-files.txt  # Konsole 配色/profile
-├── systemd/
-│   ├── system.txt         # 系统级启用的服务
-│   └── user.txt           # 用户级启用的服务
-├── node/
-│   └── npm-globals.txt    # 全局 npm 包
-├── scripts/
-│   ├── opt.sh             # 性能/续航切换
-│   └── dump-fish-vars.fish # 重新导出 universal_vars
-└── docs/
-    └── 维护手册.md         # 完整中文维护手册
+xynrin-fedora/
+├── install.sh               # 瘦身入口（banner + 一次 sudo + 调度）
+├── install-config/          # 每个步骤一个 install-*.sh
+│   ├── common.sh            # 日志 / run / link_into / need_sudo
+│   ├── install-mirrors.sh
+│   ├── install-repos.sh
+│   ├── install-dnf.sh
+│   ├── install-flatpak.sh
+│   ├── install-fish.sh
+│   ├── install-fisher.sh
+│   ├── install-vscode.sh
+│   ├── install-node.sh
+│   ├── install-systemd.sh
+│   └── install-scripts.sh
+├── bootstrap.sh             # 在线引导（curl raw 入口）
+├── mirrors/                 # 镜像切换器
+├── repos/                   # 第三方 .repo + COPR 清单
+├── packages/                # dnf / flatpak 清单
+├── fish/                    # config.fish / plugins / 函数 / universal 变量
+├── vscode/                  # settings.json + 扩展清单
+├── kde/                     # Plasma 双向同步
+├── systemd/                 # 要启用的系统/用户服务
+├── node/                    # npm 全局包
+├── scripts/                 # 自定义命令行工具（自动 symlink）
+└── docs/                    # 中文维护手册
 ```
 
 ## 步骤
 
-按 `install.sh` 里写死的顺序：
+按 `install.sh` 顺序：
 
-1. **mirrors** — 按 `mirrors/preferred.txt` 切到国内镜像（装 nvidia 必备）
-2. **repos** — RPM Fusion free/nonfree + 第三方 .repo + COPR
-3. **dnf** — `packages/dnf.txt` 里所有包
-4. **flatpak** — `packages/flatpak.txt` 里的应用
-5. **fish** — symlink config.fish / functions / conf.d，应用 universal_vars.fish（还原 tide 外观）
-6. **fisher** — bootstrap fisher + 按 `fish_plugins` 装插件
-7. **vscode** — symlink settings.json + 装扩展
-8. **node** — 通过 nvm.fish 装 LTS，按列表装全局 npm 包
-9. **systemd** — 启用 `systemd/{system,user}.txt` 里的服务
-10. **scripts** — `scripts/*.sh` → symlink 到 `~/.local/bin/<name>`（脱后缀）
+| # | 步骤 | 做什么 |
+|---|------|-------|
+| 1 | mirrors | 按 `mirrors/preferred.txt` 切到国内镜像（装 nvidia 必备） |
+| 2 | repos | RPM Fusion free/nonfree + 第三方 .repo + COPR |
+| 3 | dnf | `packages/dnf.txt` 里所有包 |
+| 4 | flatpak | `packages/flatpak.txt` 里的应用 |
+| 5 | fish | symlink config.fish / functions / conf.d，应用 universal_vars.fish |
+| 6 | fisher | bootstrap fisher + 按 `fish_plugins` 装插件 |
+| 7 | vscode | symlink settings.json + 装扩展 |
+| 8 | node | nvm LTS + `node/npm-globals.txt`（oh-my-logo 等） |
+| 9 | systemd | 启用 `systemd/{system,user}.txt` 里的服务 |
+| 10 | scripts | `scripts/*.sh` → symlink 到 `~/.local/bin/<name>`（脱后缀） |
 
 KDE 配置不自动部署，单独跑：
 
@@ -102,10 +92,12 @@ KDE 配置不自动部署，单独跑：
 
 ```sh
 ./install.sh                  # 全量
-./install.sh --only fish      # 只跑 fish
+./install.sh --only fish      # 只跑 fish 步骤
 ./install.sh --only dnf       # 只装包
 ./install.sh --dry-run        # 预览不执行
 ```
+
+**只有包含 `mirrors / repos / dnf / systemd / node` 的步骤会提升权限**；纯 fish/vscode/scripts 不问 sudo。
 
 ## 加新内容的流程
 
@@ -114,6 +106,7 @@ KDE 配置不自动部署，单独跑：
 - **新包**：追加到 `packages/dnf.txt` → `./install.sh --only dnf`
 - **新扩展**：追加到 `vscode/extensions.txt` → `./install.sh --only vscode`
 - **KDE 外观调整**：`./kde/pull.sh` 回仓库，`git commit`
+- **新增安装模块**：在 `install-config/` 加 `install-xxx.sh`，在 `install.sh` 顶部 `steps=(...)` 列表加名字即可
 
 ## 更新系统
 
@@ -126,18 +119,18 @@ fisher update            # 手动跑，注意 GitHub 匿名 API 每小时 60 次
 
 ```sh
 # tide 颜色 / fish_color_* 等 universal 变量
-fish ~/fedora-setup/scripts/dump-fish-vars.fish
+fish ~/xynrin-fedora/scripts/dump-fish-vars.fish
 
 # KDE Plasma 配置
-~/fedora-setup/kde/pull.sh
+~/xynrin-fedora/kde/pull.sh
 
 # 提交
-cd ~/fedora-setup && git add -A && git commit -m "..." && git push
+cd ~/xynrin-fedora && git add -A && git commit -m "..." && git push
 ```
 
 ## 完整文档
 
-见 [`docs/维护手册.md`](./docs/维护手册.md)：日常场景、扩展方法、排错、安全注意、设计决策。
+见 [`docs/维护手册.md`](./docs/维护手册.md)。
 
 ## 已知 Caveat
 
