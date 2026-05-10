@@ -1,6 +1,16 @@
-# xynrin-fedora
+# Xynrin-Fedora 🚀
 
-我的 Fedora KDE 工作站一键配置仓库。新机从零到可用，一条命令。
+<p align="center">
+  <img src="./image/xynrin-fedora-logo.png" alt="logo" width="150">
+</p>
+
+我的 **Fedora KDE 工作站一键配置仓库**。新机从零到可用，只需一条命令即可完成环境搭建。
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/Xynrin/xynrin-fedora)](https://github.com/Xynrin/xynrin-fedora/releases)
+[![Fedora Package](https://img.shields.io/badge/Fedora-ready-brightgreen.svg)](#)
+
+---
 
 ## 一键引导（新机推荐）
 
@@ -137,3 +147,7 @@ cd ~/xynrin-fedora && git add -A && git commit -m "..." && git push
 - **COPR `lukenukem/asus-linux`** 仅 ASUS 笔记本需要；非 ASUS 机器把 `repos/copr.txt` 和 `packages/dnf.txt` 里的 `asusctl` / `supergfxctl` 删掉。
 - **akmod-nvidia** 在 nvidia 新机上首次编译内核模块需要几分钟，完成后要重启，才会接管显卡。
 - **fcitx5 用户词库**、`~/.ssh/`、`~/.gitconfig` 等敏感配置**不纳管**，按需另行备份。
+# xynrin-fedora
+
+我的 Fedora KDE 工作站一键配置仓库。新机从零到可用，一条命令。
+![logo](/image/xynrin-fedora-logo.png)
