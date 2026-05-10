@@ -174,6 +174,10 @@ current=0
 section "前置 [0/$total]" "配置软件源（RPM Fusion + Flathub）"
 run_script "$MANDATORY_PRE" || { error "前置失败，终止"; exit 1; }
 
+# 国内镜像（检测 Asia/Shanghai 时区自动触发，其他时区自动跳）
+section "前置 [0/$total]" "国内镜像检测"
+run_script "15-cn-mirror.sh" || warn "镜像切换异常，继续使用默认"
+
 # 执行所选模块（按定义顺序）
 for m in "${MODULES[@]}"; do
     mod_id="${m%%|*}"
