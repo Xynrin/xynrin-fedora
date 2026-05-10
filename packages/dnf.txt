@@ -1,7 +1,7 @@
 # Core shell & CLI tooling
 fish
 git
-vim
+vim-enhanced
 bat
 fzf
 fastfetch
@@ -11,8 +11,7 @@ glow
 
 # Archive / fs
 unzip
-p7zip
-p7zip-plugins
+7zip
 unrar
 zstd
 compsize
@@ -27,7 +26,7 @@ util-linux
 
 # Fonts
 cascadia-code-nf-fonts
-google-noto-sans-mono-cjk-sc-fonts
+google-noto-sans-mono-cjk-vf-fonts
 aajohan-comfortaa-fonts
 
 # Input method (fcitx5 stack)
