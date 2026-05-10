@@ -76,6 +76,7 @@ MODULES=(
     "fonts-cjk|30-fonts-cjk.sh|中文字体+输入法|思源/Noto + fcitx5 拼音"
     "terminal|40-terminal.sh|终端美化|fish + starship + 现代 CLI"
     "apps|50-apps.sh|常用软件|浏览器/音视频/办公/通讯 FZF 选装"
+    "gpu|60-gpu.sh|显卡驱动|NVIDIA akmod / AMD mesa-freeworld / Intel VAAPI"
 )
 MANDATORY_PRE="10-repos.sh"
 MANDATORY_POST="90-cleanup.sh"
@@ -162,8 +163,16 @@ if [[ $DRY_RUN -eq 0 ]]; then
 fi
 
 # 前置必跑
-section "前置" "配置软件源（RPM Fusion + Flathub）"
+section "前置 [0/$total]" "配置软件源（RPM Fusion + Flathub）"
 run_script "$MANDATORY_PRE" || { error "前置失败，终止"; exit 1; }
+
+# 计算总步数
+total=0
+for m in "${MODULES[@]}"; do
+    mod_id="${m%%|*}"
+    [[ " $picked_trim " == *" $mod_id "* ]] && total=$((total + 1))
+done
+current=0
 
 # 执行所选模块（按定义顺序）
 for m in "${MODULES[@]}"; do
@@ -174,7 +183,8 @@ for m in "${MODULES[@]}"; do
     title="${rest%%|*}"
 
     if [[ " $picked_trim " == *" $mod_id "* ]]; then
-        section "$title" "$script"
+        current=$((current + 1))
+        section "[$current/$total] $title" "$script"
         run_script "$script" || warn "模块 $mod_id 执行异常，继续下一个"
     fi
 done

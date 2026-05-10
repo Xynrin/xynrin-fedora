@@ -36,9 +36,9 @@ arch=$(uname -m)
 log "xynrin-fedora — Fedora KDE 一键美化"
 log "分支: $BRANCH  目标: $TARGET_DIR"
 
-# 静默装依赖
+# 静默装依赖（pv 用于下载进度条）
 missing=()
-for c in curl tar fzf rsync; do
+for c in curl tar fzf rsync pv; do
     command -v "$c" >/dev/null 2>&1 || missing+=("$c")
 done
 if [[ ${#missing[@]} -gt 0 ]]; then
@@ -55,13 +55,23 @@ if [[ -d "$TARGET_DIR" ]]; then
 fi
 mkdir -p "$TARGET_DIR"
 
-# 下 + 解压（最多 3 次重试）
+# 下 + 解压（最多 3 次重试，pv 提供进度条）
 log "下载仓库…"
 ok_download=0
+# GitHub 不发 Content-Length，估算 tarball ~2MB
+est_size="2m"
 for attempt in 1 2 3; do
-    if curl -fsSL "$TARBALL_URL" | tar -xz -C "$TARGET_DIR" --strip-components=1; then
-        ok_download=1
-        break
+    if command -v pv >/dev/null 2>&1; then
+        if curl -fsSL "$TARBALL_URL" | pv -pterb -s "$est_size" -N "下载" \
+            | tar -xz -C "$TARGET_DIR" --strip-components=1; then
+            ok_download=1
+            break
+        fi
+    else
+        if curl -#L "$TARBALL_URL" | tar -xz -C "$TARGET_DIR" --strip-components=1; then
+            ok_download=1
+            break
+        fi
     fi
     warn "第 $attempt 次下载失败，重试中…"
     sleep 2
