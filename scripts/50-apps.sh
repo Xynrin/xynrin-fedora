@@ -124,3 +124,23 @@ if [[ ${#FAILED[@]} -gt 0 ]]; then
 else
     success "所有软件安装成功"
 fi
+
+# ---- 国产软件手动下载提示 ----
+# QQ / 微信 官方下载页是纯 JS 渲染，curl 抓不到稳定直链（且链接带时效 token）
+# Flathub 上也没有官方版本，因此不做自动安装，打印手动下载指引
+section "国产软件提示" "QQ / 微信 需手动下载"
+cat <<'EOF'
+
+   这两款没有官方 Flathub / Fedora 源仓库，请手动下载 .rpm：
+
+     QQ Linux：  https://im.qq.com/linuxqq/
+     微信 Linux：https://pc.weixin.qq.com/
+
+   下载完后在下载目录执行：
+
+     sudo dnf install ./linuxqq_*.rpm
+     sudo dnf install ./WeChat_*.rpm
+
+   dnf 会自动解决依赖。
+
+EOF
