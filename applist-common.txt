@@ -8,9 +8,9 @@ flatpak:com.google.Chrome               # Google Chrome
 flatpak:com.microsoft.Edge              # Microsoft Edge
 
 # --- 通讯 / 社交 ---
-flatpak:com.tencent.QQ                  # 腾讯 QQ
-flatpak:com.qq.weixin                   # 微信（可能需 Flathub beta）
+# 注：QQ/微信在 Flathub 上没有官方版本，建议自行下载 Linux 官方包或 AppImage
 flatpak:org.telegram.desktop            # Telegram
+flatpak:com.discordapp.Discord          # Discord
 
 # --- 音视频 ---
 mpv                                     # 极简高性能视频播放器
