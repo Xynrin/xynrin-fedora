@@ -1,0 +1,47 @@
+# 常用软件（Fedora repo + flatpak）
+# 格式：包名 <空格>+ # 描述（FZF 预览显示描述）
+# 前缀 flatpak: 走 flatpak，其余走 dnf
+
+# --- 浏览器 ---
+firefox                                 # Firefox 浏览器
+flatpak:com.google.Chrome               # Google Chrome
+flatpak:com.microsoft.Edge              # Microsoft Edge
+
+# --- 通讯 / 社交 ---
+flatpak:com.tencent.QQ                  # 腾讯 QQ
+flatpak:com.qq.weixin                   # 微信（可能需 Flathub beta）
+flatpak:org.telegram.desktop            # Telegram
+
+# --- 音视频 ---
+mpv                                     # 极简高性能视频播放器
+vlc                                     # 万能视频播放器
+flatpak:org.kde.haruna                  # Haruna（MPV + KDE 前端）
+ffmpeg-free                             # 视频/音频处理命令行
+
+# --- 办公 ---
+flatpak:org.libreoffice.LibreOffice     # LibreOffice 办公套件
+flatpak:com.github.xournalpp.xournalpp  # 手写笔记 PDF 批注
+
+# --- 图形 / 设计 ---
+gimp                                    # 图像编辑（类 Photoshop）
+krita                                   # 数字绘画
+inkscape                                # 矢量绘图
+
+# --- 开发 ---
+flatpak:com.visualstudio.code           # VSCode
+flatpak:com.vscodium.codium             # VSCodium（无遥测版 VSCode）
+git                                     # 版本控制
+
+# --- 下载 / 文件 ---
+flatpak:org.qbittorrent.qBittorrent     # qBittorrent BT 下载
+flatpak:org.localsend.localsend_app     # LocalSend 局域网互传
+transmission-gtk                        # 轻量 BT 下载
+
+# --- 游戏平台 ---
+flatpak:com.valvesoftware.Steam         # Steam
+flatpak:net.lutris.Lutris               # Lutris（Wine 游戏管理）
+
+# --- 系统小工具 ---
+flatpak:com.github.tchx84.Flatseal      # Flatseal（Flatpak 权限管理）
+flatpak:io.github.giantpinkrobots.flatsweep # Flatsweep（清理未用 flatpak 数据）
+flatpak:io.missioncenter.MissionCenter  # Mission Center（任务管理器风）

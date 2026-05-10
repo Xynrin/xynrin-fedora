@@ -1,0 +1,20 @@
+# KDE Plasma 增强/工具类（Fedora repo 名）
+# 格式：包名 <空格>+ # 描述（FZF 预览显示描述）
+
+# --- KDE 核心工具 ---
+gwenview                      # KDE 图片查看器
+okular                        # PDF / EPUB 阅读器
+ark                           # 压缩包图形化管理
+kcalc                         # 计算器
+kfind                         # 文件查找
+filelight                     # 磁盘占用可视化
+spectacle                     # 截图工具
+kcolorchooser                 # 取色器
+partitionmanager              # KDE 分区管理器
+kdeconnect                    # 手机互联（剪贴板/通知/发文件）
+
+# --- 系统管理 ---
+btop                          # 漂亮的资源监视器
+htop                          # 经典任务管理器
+baobab                        # 磁盘使用分析
+gnome-disk-utility            # 磁盘管理

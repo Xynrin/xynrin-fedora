@@ -1,65 +1,74 @@
 #!/usr/bin/env bash
-# bootstrap.sh — xynrin-fedora 在线引导脚本
+# bootstrap.sh — xynrin-fedora 在线引导
 # 用法：
 #   bash <(curl -fsSL https://raw.githubusercontent.com/Xynrin/xynrin-fedora/main/bootstrap.sh)
 #
-# 做三件事：
-#   1. 确保 git 已装（缺就用 dnf 装）
-#   2. 克隆仓库到 ~/xynrin-fedora（已存在就跳过或 git pull）
-#   3. 自动执行 install.sh
+# 做 4 件事：
+#   1. 检测 Fedora
+#   2. 静默装 curl / tar / fzf（FZF 菜单要用）
+#   3. 下 tarball 到 /tmp/xynrin-fedora（带重试）
+#   4. exec install.sh（以普通用户身份，模块内部按需 sudo）
 
 set -euo pipefail
 
-_GH_BASE="https://github.com"
-_GH_PROXY_BASE="https://ghfast.top/https://github.com"
-REPO_PATH="Xynrin/xynrin-fedora.git"
-DEST="${XYNRIN_FEDORA_DIR:-$HOME/xynrin-fedora}"
+BRANCH="${XF_BRANCH:-main}"
+TARBALL_URL="https://github.com/Xynrin/xynrin-fedora/archive/refs/heads/${BRANCH}.tar.gz"
+TARGET_DIR="${XF_TARGET_DIR:-/tmp/xynrin-fedora}"
 
-c_reset='\033[0m'; c_blue='\033[0;34m'; c_green='\033[0;32m'
-c_yellow='\033[1;33m'; c_red='\033[0;31m'
-log()  { printf "${c_blue}==>${c_reset} %s\n" "$*"; }
-ok()   { printf "${c_green}  ✓${c_reset} %s\n" "$*"; }
-warn() { printf "${c_yellow}  !${c_reset} %s\n" "$*"; }
-die()  { printf "${c_red}  ✗${c_reset} %s\n" "$*" >&2; exit 1; }
+R='\033[1;31m'; G='\033[1;32m'; Y='\033[1;33m'; B='\033[1;34m'; C='\033[1;36m'; N='\033[0m'
+log()  { printf "${B}==>${N} %s\n" "$*"; }
+ok()   { printf "${G}  ✓${N} %s\n" "$*"; }
+warn() { printf "${Y}  !${N} %s\n" "$*"; }
+die()  { printf "${R}  ✗${N} %s\n" "$*" >&2; exit 1; }
 
-# 仅支持 Fedora 系
-if ! command -v dnf >/dev/null 2>&1; then
-    die "没找到 dnf，这个脚本只支持 Fedora。"
+# 不允许以 root 跑，避免 $HOME 变 /root 污染小白 ~
+if [[ $EUID -eq 0 ]]; then
+    die "请以普通用户跑本脚本，模块内部会按需 sudo（这样 ~/.config 落到你自己家里）"
 fi
 
-# 1) git
-if ! command -v git >/dev/null 2>&1; then
-    log "安装 git"
-    sudo dnf install -y git || die "git 安装失败"
-    ok "git 已装"
-else
-    ok "git 已存在"
+# 检测 Fedora
+[[ -f /etc/fedora-release ]] || die "本脚本仅支持 Fedora"
+
+# 检测架构
+arch=$(uname -m)
+[[ "$arch" == "x86_64" || "$arch" == "aarch64" ]] || die "不支持的架构: $arch"
+
+log "xynrin-fedora — Fedora KDE 一键美化"
+log "分支: $BRANCH  目标: $TARGET_DIR"
+
+# 静默装依赖
+missing=()
+for c in curl tar fzf rsync; do
+    command -v "$c" >/dev/null 2>&1 || missing+=("$c")
+done
+if [[ ${#missing[@]} -gt 0 ]]; then
+    log "安装依赖: ${missing[*]}"
+    sudo dnf install -y "${missing[@]}" >/dev/null 2>&1 \
+        || die "依赖安装失败，请检查网络或手动 sudo dnf install ${missing[*]}"
+    ok "依赖装好"
 fi
 
-# 探测 GitHub 直连是否可达，不可达时走 ghfast.top 代理
-_pick_gh_base() {
-    if git ls-remote --exit-code "$_GH_BASE/$REPO_PATH" HEAD >/dev/null 2>&1; then
-        printf '%s' "$_GH_BASE"
-    else
-        warn "github.com 不可达，使用 ghfast.top 代理"
-        printf '%s' "$_GH_PROXY_BASE"
+# 清理旧目录
+if [[ -d "$TARGET_DIR" ]]; then
+    warn "覆盖旧目录: $TARGET_DIR"
+    rm -rf "$TARGET_DIR"
+fi
+mkdir -p "$TARGET_DIR"
+
+# 下 + 解压（最多 3 次重试）
+log "下载仓库…"
+ok_download=0
+for attempt in 1 2 3; do
+    if curl -fsSL "$TARBALL_URL" | tar -xz -C "$TARGET_DIR" --strip-components=1; then
+        ok_download=1
+        break
     fi
-}
+    warn "第 $attempt 次下载失败，重试中…"
+    sleep 2
+done
+[[ $ok_download -eq 1 ]] || die "下载 $TARBALL_URL 失败，请检查网络"
+ok "仓库就绪: $TARGET_DIR"
 
-# 2) clone / pull
-if [[ -d "$DEST/.git" ]]; then
-    log "仓库已存在，拉取最新"
-    git -C "$DEST" pull --ff-only || warn "git pull 失败，继续用本地版本"
-elif [[ -e "$DEST" ]]; then
-    die "$DEST 已存在但不是 git 仓库，请先手动处理"
-else
-    _gh_base=$(_pick_gh_base)
-    REPO_URL="$_gh_base/$REPO_PATH"
-    log "克隆 $REPO_URL → $DEST"
-    git clone "$REPO_URL" "$DEST"
-fi
-ok "仓库就绪：$DEST"
-
-# 3) 执行 install.sh
-chmod +x "$DEST/install.sh"
-exec "$DEST/install.sh" "$@"
+# exec install.sh
+chmod +x "$TARGET_DIR/install.sh"
+exec "$TARGET_DIR/install.sh" "$@"

@@ -1,5 +1,0 @@
-# VirtualBox host support
-# Installed when: physical machine (skipped inside a VM)
-akmod-VirtualBox
-kernel-devel
-VirtualBox

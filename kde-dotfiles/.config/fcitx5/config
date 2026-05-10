@@ -1,0 +1,12 @@
+[Behavior]
+# 默认激活的输入法（0=不切换，1=英文，2=拼音）
+ActiveByDefault=False
+# 输入法切换快捷键：Ctrl+Space 切换中英
+# 详细按键用户可自行在 fcitx5-configtool 调
+PreeditEnabledByDefault=True
+ShareInputState=All
+ShowFirstInputMethodHint=True
+ShowInputMethodInformation=True
+ShowInputMethodInformationWhenFocusIn=False
+ShowPreeditForPassword=False
+PreloadInputMethod=True

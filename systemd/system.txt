@@ -1,2 +1,0 @@
-# System-level services to enable (sudo systemctl enable --now)
-supergfxd.service

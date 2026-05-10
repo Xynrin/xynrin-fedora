@@ -1,8 +1,0 @@
-# KDE Konsole 配色方案 / 配置文件
-# 每行一个相对于 ~/.local/share/konsole/ 的文件名
-# 只放你自己新建/下载的，KDE 自带的不需要列
-
-Catppuccin-Mocha.colorscheme
-Nord.colorscheme
-Shell.profile
-Test.profile

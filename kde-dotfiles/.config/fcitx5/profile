@@ -1,0 +1,16 @@
+[Groups/0]
+# 默认输入法组：英文 + 拼音
+Name=默认
+Default Layout=us
+DefaultIM=pinyin
+
+[Groups/0/Items/0]
+Name=keyboard-us
+Layout=
+
+[Groups/0/Items/1]
+Name=pinyin
+Layout=
+
+[GroupOrder]
+0=默认

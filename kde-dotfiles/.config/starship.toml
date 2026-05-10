@@ -1,0 +1,113 @@
+# xynrin-fedora — starship prompt (清爽配色版)
+# 参考 starship.rs 官方 preset，默认启用图标 + git 状态
+
+add_newline = true
+command_timeout = 1000
+
+format = """
+[](bold blue)\
+$os\
+$username\
+[](bg:peach fg:blue)\
+$directory\
+[](fg:peach bg:green)\
+$git_branch\
+$git_status\
+[](fg:green bg:teal)\
+$nodejs\
+$python\
+$rust\
+$golang\
+[](fg:teal bg:purple)\
+$time\
+[ ](fg:purple)\
+$line_break\
+$character"""
+
+[os]
+disabled = false
+style = "bg:blue fg:white"
+
+[os.symbols]
+Fedora = " "
+Linux = " "
+Macos = " "
+Ubuntu = " "
+Windows = "󰍲 "
+
+[username]
+show_always = true
+style_user = "bg:blue fg:white"
+style_root = "bg:blue fg:white"
+format = '[ $user ]($style)'
+disabled = false
+
+[directory]
+style = "bg:peach fg:crust"
+format = "[ $path ]($style)"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[directory.substitutions]
+"Documents" = "󰈙 "
+"Downloads" = " "
+"Music" = "󰝚 "
+"Pictures" = " "
+"Developer" = "󰲋 "
+
+[git_branch]
+symbol = ""
+style = "bg:green fg:crust"
+format = '[ $symbol $branch ]($style)'
+
+[git_status]
+style = "bg:green fg:crust"
+format = '[($all_status$ahead_behind )]($style)'
+
+[nodejs]
+symbol = ""
+style = "bg:teal fg:crust"
+format = '[ $symbol ($version) ]($style)'
+
+[python]
+symbol = ""
+style = "bg:teal fg:crust"
+format = '[ $symbol ($version) ]($style)'
+
+[rust]
+symbol = ""
+style = "bg:teal fg:crust"
+format = '[ $symbol ($version) ]($style)'
+
+[golang]
+symbol = ""
+style = "bg:teal fg:crust"
+format = '[ $symbol ($version) ]($style)'
+
+[time]
+disabled = false
+time_format = "%R"
+style = "bg:purple fg:crust"
+format = '[ ♥ $time ]($style)'
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+
+[palette]
+blue = "#89B4FA"
+peach = "#FAB387"
+green = "#A6E3A1"
+teal = "#94E2D5"
+purple = "#CBA6F7"
+crust = "#11111B"
+
+palette = "catppuccin"
+
+[palettes.catppuccin]
+blue = "#89B4FA"
+peach = "#FAB387"
+green = "#A6E3A1"
+teal = "#94E2D5"
+purple = "#CBA6F7"
+crust = "#11111B"

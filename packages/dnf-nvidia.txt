@@ -1,3 +1,0 @@
-# NVIDIA GPU driver (from rpmfusion-nonfree)
-# Installed when: physical machine + NVIDIA GPU detected
-akmod-nvidia

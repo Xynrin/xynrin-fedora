@@ -1,4 +1,0 @@
-# ASUS laptop toolkit (from lukenukem/asus-linux COPR)
-# Installed when: physical machine + ASUS vendor detected
-asusctl
-supergfxctl

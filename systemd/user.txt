@@ -1,2 +1,0 @@
-# User-level services to enable (systemctl --user enable --now)
-# (empty for now)
