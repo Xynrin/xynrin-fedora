@@ -32,7 +32,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/Xynrin/xynrin-fedora/main/bo
 
 ## 要求
 
-- Fedora 40+（KDE Spin 推荐，其他 Spin 也能跑）
+- Fedora 41+（已在 Fedora 44 KDE Spin 测试，Plasma 6.6 + dnf5）
+- 其他 Spin 也能跑，KDE 模块对非 KDE 桌面会跳过
 - 能访问外网（脚本从 github / flathub / rpmfusion 拉资源）
 - 一个普通用户（UID 1000）
 - x86_64 或 aarch64

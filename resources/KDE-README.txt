@@ -32,4 +32,9 @@
   没装成功的软件：~/Documents/xynrin-fedora-install-failed.txt
   GitHub Issues： https://github.com/Xynrin/xynrin-fedora/issues
 
+📌 Fedora 44 小提示
+  • 默认包管理器是 dnf5（dnf 命令仍可用，是 dnf5 的别名）
+  • 默认显示管理器从 SDDM 换成了 Plasma Login Manager
+  • Plasma 6.6 引入了首次启动向导（Plasma Setup）
+
 记得：大部分主题/字体/输入法的改动，需要 **注销重登或重启** 才完全生效。

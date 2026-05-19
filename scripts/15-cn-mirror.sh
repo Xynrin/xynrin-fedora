@@ -2,6 +2,7 @@
 # 15-cn-mirror.sh — 国内镜像切换（默认跑，非 CN 时区自动跳过）
 # 触发条件：/etc/localtime 指向 Asia/Shanghai，或 export XF_CN_MIRROR=1
 # 想跳过：XF_SKIP_CN_MIRROR=1
+# 兼容 Fedora 41+（dnf5）与 Fedora 40-（dnf4）
 
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,28 +34,51 @@ fi
 TUNA="https://mirrors.tuna.tsinghua.edu.cn"
 SJTU_FLATHUB="https://mirror.sjtu.edu.cn/flathub"
 
+# repo 文件占位符模式（Fedora 长年保持）：
+#   #baseurl=http://download.example/pub/fedora/linux...
+#   #baseurl=http://download1.rpmfusion.org/...
+# 改前先校验占位符存在，避免新版本格式变化时静默失效
+_switch_repo() {
+    local file="$1" placeholder_pat="$2" replacement="$3"
+    [[ -f "$file" ]] || return 0
+
+    if ! grep -qE "$placeholder_pat" "$file"; then
+        warn "$(basename "$file") 中未找到 baseurl 占位符，跳过（格式可能已变）"
+        return 0
+    fi
+
+    if [[ ${DRY_RUN:-0} -eq 1 ]]; then
+        dim "DRY-RUN: 会切 $(basename "$file")"
+        return 0
+    fi
+
+    sudo cp -n "$file" "${file}.xfbak"
+    sudo sed -i \
+        -e 's|^metalink=|#metalink=|g' \
+        -e "s|^#baseurl=${placeholder_pat}|baseurl=${replacement}|g" \
+        "$file"
+    dim "已切: $(basename "$file")"
+}
+
 log "切换 Fedora 主仓库到 TUNA"
 need_sudo
 
-# Fedora 主仓库（metalink → TUNA baseurl）
-# 覆盖 fedora.repo / fedora-updates.repo 等；cisco-openh264 单独处理
-for f in /etc/yum.repos.d/fedora{,-updates,-updates-testing}.repo; do
-    [[ -f "$f" ]] || continue
-    sudo sed -i.xfbak \
-        -e 's|^metalink=|#metalink=|g' \
-        -e 's|^#baseurl=http://download\.example/pub/fedora/linux|baseurl='"$TUNA"'/fedora|g' \
-        "$f"
-    dim "已切: $(basename "$f")"
+# Fedora 主仓库（F41+ 把官方源拆得更细，统一遍历 fedora*.repo）
+for f in /etc/yum.repos.d/fedora.repo \
+         /etc/yum.repos.d/fedora-updates.repo \
+         /etc/yum.repos.d/fedora-updates-testing.repo \
+         /etc/yum.repos.d/fedora-cisco-openh264.repo; do
+    _switch_repo "$f" \
+        'http://download\.example/pub/fedora/linux' \
+        "$TUNA/fedora"
 done
 
-# RPM Fusion（10-repos 刚装的）
+# RPM Fusion
 for f in /etc/yum.repos.d/rpmfusion-*.repo; do
     [[ -f "$f" ]] || continue
-    sudo sed -i.xfbak \
-        -e 's|^metalink=|#metalink=|g' \
-        -e 's|^#baseurl=http://download1\.rpmfusion\.org|baseurl='"$TUNA"'/rpmfusion|g' \
-        "$f"
-    dim "已切: $(basename "$f")"
+    _switch_repo "$f" \
+        'http://download1\.rpmfusion\.org' \
+        "$TUNA/rpmfusion"
 done
 
 # Flathub → SJTU 镜像
@@ -66,6 +90,7 @@ fi
 
 # 刷新元数据，让新镜像立即生效
 log "刷新 dnf 元数据（用新镜像）"
-exe sudo dnf makecache --refresh
+exe sudo "$XF_DNF" makecache --refresh
 
-success "国内镜像切换完成（如要回官方：删除 /etc/yum.repos.d/*.xfbak 前的 sed 改动可人工改回）"
+success "国内镜像切换完成"
+dim "回滚：sudo cp /etc/yum.repos.d/*.xfbak 同名文件（去掉 .xfbak 后缀）"

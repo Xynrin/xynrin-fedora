@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run shellcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          # SC1091 = source 文件解析不到（运行时正确）；SC2086 已在代码里 disable
+          shellcheck --severity=warning --exclude=SC1091 \
+            bootstrap.sh \
+            install.sh \
+            scripts/*.sh
+
+  fedora-dryrun:
+    name: Dry-run on Fedora ${{ matrix.fedora }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        fedora: ["44", "43", "42"]
+    container:
+      image: fedora:${{ matrix.fedora }}
+      options: --user root
+    steps:
+      - name: Install base tools
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            git fzf rsync sudo findutils which procps-ng \
+            shadow-utils awk gawk pciutils
+
+      - uses: actions/checkout@v4
+
+      - name: Create non-root user (脚本要求 UID 1000 普通用户)
+        run: |
+          useradd -m -u 1000 -s /bin/bash xynrin
+          # passwordless sudo
+          echo 'xynrin ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/xynrin
+          chmod 440 /etc/sudoers.d/xynrin
+          chown -R xynrin:xynrin "$GITHUB_WORKSPACE"
+
+      - name: Verify Fedora version + dnf5 detection
+        run: |
+          source /etc/os-release
+          echo "OS: $PRETTY_NAME"
+          echo "VERSION_ID=$VERSION_ID"
+          rpm -E %fedora
+          which dnf5 || echo "no dnf5"
+          which dnf  || echo "no dnf"
+
+      - name: Run install.sh --all --dry-run
+        run: |
+          su - xynrin -c "
+            set -e
+            cd '$GITHUB_WORKSPACE'
+            export DRY_RUN=1
+            export XF_SKIP_CN_MIRROR=1   # CI 跑在境外，跳 TUNA 切换
+            chmod +x bootstrap.sh install.sh scripts/*.sh
+            bash install.sh --all --dry-run
+          "
+
+      - name: Run --only apps in dry-run（验证 FZF 默认选全部分支）
+        run: |
+          su - xynrin -c "
+            cd '$GITHUB_WORKSPACE'
+            export DRY_RUN=1
+            export XF_SKIP_CN_MIRROR=1
+            bash install.sh --only apps --dry-run
+          "
+
+      - name: Show install log
+        if: always()
+        run: |
+          echo '===== /tmp/xynrin-fedora-install.log ====='
+          cat /tmp/xynrin-fedora-install.log 2>/dev/null || echo '(no log)'

@@ -65,10 +65,13 @@ if [[ $has_nvidia -eq 1 ]]; then
         dnf_install \
             akmod-nvidia \
             xorg-x11-drv-nvidia-cuda \
-            xorg-x11-drv-nvidia-cuda-libs.i686 \
             nvidia-vaapi-driver \
             libva-utils \
             vdpauinfo
+
+        # 32 位 CUDA 库（Steam/Wine 可能要）。多架构未启用时会失败，容错跳过
+        dnf_install xorg-x11-drv-nvidia-cuda-libs.i686 2>/dev/null || \
+            dim "32 位 CUDA 库未装上（多架构未启用，Steam/Wine 时再补）"
 
         # 触发构建并等待
         log "触发 akmod 内核模块构建（可能要几分钟）"
@@ -87,16 +90,16 @@ if [[ $has_amd -eq 1 ]]; then
     # RPM Fusion 的 freeworld 版 mesa 支持更多编解码器（h264/h265/vc1）
     dnf_install mesa-dri-drivers
 
-    # freeworld 替换（swap 不抛错）
+    # freeworld 替换（swap 不抛错）。dnf5 仍支持 swap 子命令
     need_sudo
-    exe sudo dnf swap -y mesa-va-drivers mesa-va-drivers-freeworld 2>/dev/null || \
+    exe sudo "$XF_DNF" swap -y mesa-va-drivers mesa-va-drivers-freeworld 2>/dev/null || \
         dim "mesa-va-drivers-freeworld 已就位或无需替换"
-    exe sudo dnf swap -y mesa-vdpau-drivers mesa-vdpau-drivers-freeworld 2>/dev/null || \
+    exe sudo "$XF_DNF" swap -y mesa-vdpau-drivers mesa-vdpau-drivers-freeworld 2>/dev/null || \
         dim "mesa-vdpau-drivers-freeworld 已就位或无需替换"
 
     # 32 位支持（Steam/Wine 用）
-    exe sudo dnf swap -y mesa-va-drivers.i686 mesa-va-drivers-freeworld.i686 2>/dev/null || true
-    exe sudo dnf swap -y mesa-vdpau-drivers.i686 mesa-vdpau-drivers-freeworld.i686 2>/dev/null || true
+    exe sudo "$XF_DNF" swap -y mesa-va-drivers.i686 mesa-va-drivers-freeworld.i686 2>/dev/null || true
+    exe sudo "$XF_DNF" swap -y mesa-vdpau-drivers.i686 mesa-vdpau-drivers-freeworld.i686 2>/dev/null || true
 
     dnf_install libva-utils vdpauinfo
 

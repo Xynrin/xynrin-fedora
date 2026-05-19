@@ -79,13 +79,13 @@ declare -a FAILED=()
 
 # ---- dnf 批量 ----
 if [[ ${#DNF_APPS[@]} -gt 0 ]]; then
-    log "dnf 批量安装"
+    log "$XF_DNF 批量安装"
     need_sudo
-    if ! exe sudo dnf install -y "${DNF_APPS[@]}"; then
+    if ! exe sudo "$XF_DNF" install -y "${DNF_APPS[@]}"; then
         warn "批量安装失败，逐个重试"
         for pkg in "${DNF_APPS[@]}"; do
             if ! rpm -q "$pkg" >/dev/null 2>&1; then
-                if ! sudo dnf install -y "$pkg"; then
+                if ! sudo "$XF_DNF" install -y "$pkg"; then
                     FAILED+=("dnf:$pkg")
                 fi
             fi

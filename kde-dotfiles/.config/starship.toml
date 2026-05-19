@@ -94,14 +94,6 @@ format = '[ ♥ $time ]($style)'
 success_symbol = "[❯](bold green)"
 error_symbol = "[❯](bold red)"
 
-[palette]
-blue = "#89B4FA"
-peach = "#FAB387"
-green = "#A6E3A1"
-teal = "#94E2D5"
-purple = "#CBA6F7"
-crust = "#11111B"
-
 palette = "catppuccin"
 
 [palettes.catppuccin]

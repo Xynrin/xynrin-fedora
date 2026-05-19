@@ -1,18 +1,29 @@
 #!/usr/bin/env bash
 # 10-repos.sh — 启用 RPM Fusion free/nonfree + 添加 Flathub remote + 全量更新
 # 前置必跑：其他模块的包依赖这两个源
+# 兼容 Fedora 41+（dnf5 默认）与 Fedora 40 及以下（dnf4）
 
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=00-utils.sh
 source "$SCRIPT_DIR/00-utils.sh"
 
-fedver=$(rpm -E %fedora)
+xf_check_fedora_version || true
+fedver=$(xf_fedora_version)
+
+info_kv "Fedora 版本" "$fedver"
+info_kv "包管理器" "$XF_DNF"
 
 # ---- dnf.conf 一次性调优：并发下载 + 最快镜像 ----
+# 注：dnf5 与 dnf4 共用 /etc/dnf/dnf.conf；max_parallel_downloads 二者都支持
+# fastestmirror 在 dnf5 里仍可用，但 dnf5 命令行 --setopt 不再读它，所以只写配置文件
 tune_dnf_conf() {
     local conf="/etc/dnf/dnf.conf"
-    [[ -f "$conf" ]] || return 0
+    if [[ ${DRY_RUN:-0} -eq 1 ]]; then
+        dim "DRY-RUN: 跳过写 $conf"
+        return 0
+    fi
+    [[ -f "$conf" ]] || sudo touch "$conf"
     local changed=0
     if ! grep -q '^max_parallel_downloads=' "$conf"; then
         need_sudo
@@ -49,7 +60,7 @@ _install_rpmfusion() {
     fi
     local url="https://mirrors.rpmfusion.org/${variant}/fedora/rpmfusion-${variant}-release-${fedver}.noarch.rpm"
     need_sudo
-    exe sudo dnf install -y "$url" && success "rpmfusion-${variant} 已启用"
+    exe sudo "$XF_DNF" install -y "$url" && success "rpmfusion-${variant} 已启用"
 }
 
 log "启用 RPM Fusion free / nonfree"
@@ -58,12 +69,12 @@ _install_rpmfusion nonfree
 
 # ---- 刷新元数据 ----
 log "刷新 dnf 元数据"
-exe sudo dnf makecache --refresh
+exe sudo "$XF_DNF" makecache --refresh
 
 # ---- 全量更新（首次跑很关键，否则 rpmfusion 新包可能依赖更新的 glibc 等） ----
 log "全量更新系统（可能需要几分钟）"
 need_sudo
-exe sudo dnf upgrade -y --refresh
+exe sudo "$XF_DNF" upgrade -y --refresh
 
 # ---- Flatpak + Flathub ----
 dnf_install flatpak

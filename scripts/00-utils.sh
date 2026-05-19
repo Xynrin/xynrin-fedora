@@ -120,7 +120,8 @@ need_sudo() {
 }
 
 # dnf 并发下载参数（10-repos.sh 会写入 dnf.conf 永久生效；此处命令行兜底）
-XF_DNF_OPTS="--setopt=max_parallel_downloads=10 --setopt=fastestmirror=True"
+# 注：dnf5 与 dnf4 都支持 --setopt 形式
+XF_DNF_OPTS="--setopt=max_parallel_downloads=10"
 
 # dnf_install PKG [PKG...]  — 按需装，已装的跳过，并发下载
 dnf_install() {
@@ -129,12 +130,12 @@ dnf_install() {
         rpm -q "$p" >/dev/null 2>&1 || missing+=("$p")
     done
     if [[ ${#missing[@]} -eq 0 ]]; then
-        dim "dnf 已全部安装: $*"
+        dim "已全部安装: $*"
         return 0
     fi
     need_sudo
     # shellcheck disable=SC2086
-    exe sudo dnf install -y $XF_DNF_OPTS "${missing[@]}"
+    exe sudo "$XF_DNF" install -y $XF_DNF_OPTS "${missing[@]}"
 }
 
 # flatpak_install APPID [APPID...] — flathub
@@ -225,6 +226,36 @@ run_hide_desktop_files() {
 
 # ===== 8. 工具函数 =====
 xf_is_fedora() { [[ -f /etc/fedora-release ]]; }
+
+# Fedora 大版本号（取不到则为 0）
+xf_fedora_version() {
+    rpm -E %fedora 2>/dev/null || echo 0
+}
+
+# 最低支持版本检查（默认 41，dnf5 时代）
+xf_min_fedora="${XF_MIN_FEDORA:-41}"
+xf_check_fedora_version() {
+    local v
+    v=$(xf_fedora_version)
+    if [[ "$v" -lt "$xf_min_fedora" ]]; then
+        warn "当前 Fedora $v 低于推荐的 $xf_min_fedora，部分包名/特性可能不可用"
+        return 1
+    fi
+    return 0
+}
+
+# 检测 dnf 版本（5 / 4），优先 dnf5
+xf_dnf_bin() {
+    if command -v dnf5 >/dev/null 2>&1; then
+        echo dnf5
+    elif command -v dnf >/dev/null 2>&1; then
+        echo dnf
+    else
+        return 1
+    fi
+}
+export XF_DNF
+XF_DNF=$(xf_dnf_bin || echo dnf)
 
 read_list() { grep -vE '^\s*(#|$)' "$1" 2>/dev/null || true; }
 
