@@ -168,7 +168,8 @@ backup_and_copy() {
             dim "保留宿主机配置: $dst（想强刷：XF_DOTFILES_FORCE=1）"
             return 0
         fi
-        local bak="${dst}.bak.$(date +%Y%m%d-%H%M%S)"
+        local bak
+        bak="${dst}.bak.$(date +%Y%m%d-%H%M%S)"
         exe cp -a "$dst" "$bak"
     fi
     exe mkdir -p "$(dirname "$dst")"

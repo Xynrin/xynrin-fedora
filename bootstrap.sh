@@ -15,7 +15,7 @@ BRANCH="${XF_BRANCH:-main}"
 TARBALL_URL="https://github.com/Xynrin/xynrin-fedora/archive/refs/heads/${BRANCH}.tar.gz"
 TARGET_DIR="${XF_TARGET_DIR:-/tmp/xynrin-fedora}"
 
-R='\033[1;31m'; G='\033[1;32m'; Y='\033[1;33m'; B='\033[1;34m'; C='\033[1;36m'; N='\033[0m'
+R='\033[1;31m'; G='\033[1;32m'; Y='\033[1;33m'; B='\033[1;34m'; N='\033[0m'
 log()  { printf "${B}==>${N} %s\n" "$*"; }
 ok()   { printf "${G}  ✓${N} %s\n" "$*"; }
 warn() { printf "${Y}  !${N} %s\n" "$*"; }
