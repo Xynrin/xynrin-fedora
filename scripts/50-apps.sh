@@ -77,31 +77,32 @@ info_kv "计划安装" "dnf: ${#DNF_APPS[@]}" "flatpak: ${#FLATPAK_APPS[@]}"
 
 declare -a FAILED=()
 
-# ---- dnf 批量 ----
+# ---- dnf 逐个安装（用 00-utils.sh 的 dnf_install，自带 [N/M] 进度 + 实时反馈）----
 if [[ ${#DNF_APPS[@]} -gt 0 ]]; then
-    log "$XF_DNF 批量安装"
-    need_sudo
-    if ! exe sudo "$XF_DNF" install -y "${DNF_APPS[@]}"; then
-        warn "批量安装失败，逐个重试"
-        for pkg in "${DNF_APPS[@]}"; do
-            if ! rpm -q "$pkg" >/dev/null 2>&1; then
-                if ! sudo "$XF_DNF" install -y "$pkg"; then
-                    FAILED+=("dnf:$pkg")
-                fi
-            fi
-        done
-    fi
+    XF_FAILED_PKGS_BEFORE="${XF_FAILED_PKGS:-}"
+    dnf_install "${DNF_APPS[@]}" || true
+    # 把 dnf_install 累加到 XF_FAILED_PKGS 的部分挪到本模块的 FAILED 里
+    NEW_FAIL="${XF_FAILED_PKGS#"$XF_FAILED_PKGS_BEFORE"}"
+    for p in $NEW_FAIL; do
+        [[ -n "$p" ]] && FAILED+=("dnf:$p")
+    done
 fi
 
 # ---- flatpak 逐个 ----
 if [[ ${#FLATPAK_APPS[@]} -gt 0 ]]; then
-    log "flatpak 安装（每个独立）"
+    log "flatpak 安装 ${#FLATPAK_APPS[@]} 个"
+    fp_total=${#FLATPAK_APPS[@]} fp_idx=0
     for app in "${FLATPAK_APPS[@]}"; do
+        fp_idx=$((fp_idx + 1))
         if flatpak info "$app" >/dev/null 2>&1; then
-            dim "已装: $app"
+            printf "    ${C3}[%d/%d]${NC} ${DOT} ${DIM}%s (已装)${NC}\n" "$fp_idx" "$fp_total" "$app"
             continue
         fi
-        if ! exe flatpak install -y --noninteractive flathub "$app"; then
+        printf "    ${C3}[%d/%d]${NC} ${DIM}%s${NC}\r" "$fp_idx" "$fp_total" "$app"
+        if flatpak install -y --noninteractive flathub "$app" </dev/null >>"$XF_LOG_FILE" 2>&1; then
+            printf "    ${C3}[%d/%d]${NC} ${TICK} %-40s\n" "$fp_idx" "$fp_total" "$app"
+        else
+            printf "    ${C3}[%d/%d]${NC} ${CROSS} %-40s ${DIM}(见日志)${NC}\n" "$fp_idx" "$fp_total" "$app"
             FAILED+=("flatpak:$app")
         fi
     done
