@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 50-apps.sh — 常用软件 FZF 多选 + 批量装
+# 50-apps.sh — 常用软件 FZF 多选 + 逐包安装
 
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,7 +12,7 @@ PARENT_DIR="$SETUP_DIR"
 LIST_KDE="$PARENT_DIR/applist-kde.txt"
 LIST_COMMON="$PARENT_DIR/applist-common.txt"
 
-# 汇总清单：先 common，再 kde
+# ---- 汇总清单 ----
 merged=""
 [[ -f "$LIST_COMMON" ]] && merged+=$(cat "$LIST_COMMON")$'\n'
 [[ -f "$LIST_KDE" ]] && merged+=$(cat "$LIST_KDE")$'\n'
@@ -22,45 +22,61 @@ if [[ -z "${merged// /}" ]]; then
     exit 0
 fi
 
-# 过滤注释空行，并把行内注释变 TAB（FZF 用 TAB 分字段）
+# 过滤注释空行，行内注释变 TAB 分隔（fzf 用 TAB 分字段）
 cleaned=$(echo "$merged" | grep -vE '^\s*(#|$)' | sed -E 's/[[:space:]]+#/\t#/')
+total_count=$(echo "$cleaned" | grep -c '^[^[:space:]]')
 
-section "常用软件" "FZF 多选（默认全选 · TAB 切换 · Enter 确认）"
-echo ""
-dim "20 秒内按任意键进入自选菜单；不按就默认安装全部。"
+section "常用软件" "共 $total_count 个候选 · 默认全选"
 
-if read -t 20 -n 1 -s -r; then
-    customize=true
-else
-    customize=false
-fi
-
+# ---- 选择 ----
+# 1) --all / 非交互：直接全选，不弹菜单
+# 2) 交互：fzf 流式接收（pipe），开窗即出列表，无空窗期
 selected=""
-if [[ "$customize" == true ]]; then
-    selected=$(echo "$cleaned" | fzf \
-        --multi \
-        --delimiter=$'\t' \
-        --with-nth=1 \
-        --layout=reverse \
-        --border=rounded \
-        --border-label="  选择要安装的软件  " \
-        --header="[TAB] 选 | [CTRL-A] 全选 | [CTRL-D] 全不选 | [Enter] 确认" \
-        --bind 'load:select-all,ctrl-a:select-all,ctrl-d:deselect-all' \
-        --preview 'echo {} | cut -f2- | sed "s/^#[ ]*//"' \
-        --preview-window=down:3:wrap \
-        --color="marker:cyan,pointer:cyan,label:yellow" \
-        --pointer=">" \
-        --height=80%) || {
-            warn "用户取消，跳过软件安装"
-            exit 0
-        }
-    [[ -z "$selected" ]] && { warn "未选择任何软件，跳过"; exit 0; }
-else
-    log "超时未选，默认安装全部"
+if [[ "${XF_NONINTERACTIVE:-0}" == "1" ]]; then
+    log "非交互模式：默认安装全部 ($total_count)"
     selected="$cleaned"
+else
+    dim "操作：[TAB] 切换 / [Ctrl-A] 全选 / [Ctrl-D] 全不选 / [Enter] 确认 / [Esc] 取消"
+    echo ""
+
+    # 流式喂给 fzf：边读边渲染，避免"打开后空白"的体感
+    # 关键：去掉 --sync（它会等 stdin 关闭再渲染），用默认异步模式
+    # --bind 'start:...'：fzf 启动瞬间触发，不必等 load 完成再全选
+    # --tac：从尾部往头部进，让最常用的（applist 顶部）排在最上面（视觉一致）
+    # 注：echo "$cleaned" 已经在内存，但 fzf 用流式读取仍然边收边显示
+    if selected=$(
+        echo "$cleaned" | fzf \
+            --multi \
+            --delimiter=$'\t' \
+            --with-nth=1 \
+            --layout=reverse \
+            --border=rounded \
+            --border-label="  $total_count 个软件包 / 默认全选  " \
+            --border-label-pos=3 \
+            --info=inline-right \
+            --prompt="搜索 ❯ " \
+            --header="Enter 安装勾选项 · TAB 切换 · Ctrl-A 全选 · Ctrl-D 全不选" \
+            --bind 'start:select-all' \
+            --bind 'ctrl-a:select-all' \
+            --bind 'ctrl-d:deselect-all' \
+            --preview 'echo {} | cut -f2- | sed "s/^#[ ]*//;s/^$/(无说明)/"' \
+            --preview-window=down:2:wrap \
+            --color="fg:#cdd6f4,bg:-1,hl:#f9e2af,fg+:#cdd6f4,bg+:#313244,hl+:#f9e2af" \
+            --color="info:#89b4fa,prompt:#cba6f7,pointer:#cba6f7,marker:#a6e3a1,spinner:#94e2d5" \
+            --color="header:#94e2d5,border:#cba6f7,label:#f5c2e7" \
+            --pointer="❯" \
+            --marker="✓" \
+            --height=80%
+    ); then
+        :
+    else
+        warn "用户取消，跳过软件安装"
+        exit 0
+    fi
+    [[ -z "$selected" ]] && { warn "未选择任何软件，跳过"; exit 0; }
 fi
 
-# 解析：flatpak: 前缀走 flatpak，其余走 dnf
+# ---- 解析：flatpak: 前缀走 flatpak，其余走 dnf ----
 declare -a DNF_APPS=()
 declare -a FLATPAK_APPS=()
 while IFS= read -r line; do
@@ -77,11 +93,10 @@ info_kv "计划安装" "dnf: ${#DNF_APPS[@]}" "flatpak: ${#FLATPAK_APPS[@]}"
 
 declare -a FAILED=()
 
-# ---- dnf 逐个安装（用 00-utils.sh 的 dnf_install，自带 [N/M] 进度 + 实时反馈）----
+# ---- dnf 逐包安装（用 00-utils.sh 的 dnf_install，自带 [N/M] 进度 + 实时反馈）----
 if [[ ${#DNF_APPS[@]} -gt 0 ]]; then
     XF_FAILED_PKGS_BEFORE="${XF_FAILED_PKGS:-}"
     dnf_install "${DNF_APPS[@]}" || true
-    # 把 dnf_install 累加到 XF_FAILED_PKGS 的部分挪到本模块的 FAILED 里
     NEW_FAIL="${XF_FAILED_PKGS#"$XF_FAILED_PKGS_BEFORE"}"
     for p in $NEW_FAIL; do
         [[ -n "$p" ]] && FAILED+=("dnf:$p")
@@ -127,8 +142,6 @@ else
 fi
 
 # ---- 国产软件手动下载提示 ----
-# QQ / 微信 官方下载页是纯 JS 渲染，curl 抓不到稳定直链（且链接带时效 token）
-# Flathub 上也没有官方版本，因此不做自动安装，打印手动下载指引
 section "国产软件提示" "QQ / 微信 需手动下载"
 cat <<'EOF'
 
