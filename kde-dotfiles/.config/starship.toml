@@ -1,8 +1,9 @@
-# xynrin-fedora — starship prompt (清爽配色版)
-# 参考 starship.rs 官方 preset，默认启用图标 + git 状态
+# xynrin-fedora — starship prompt（Catppuccin Powerline 风）
+# 注意：palette 必须是顶层 key（不能落在任何 [table] 里），否则全员变默认色
 
 add_newline = true
 command_timeout = 1000
+palette = "catppuccin"
 
 format = """
 [](bold blue)\
@@ -24,9 +25,17 @@ $time\
 $line_break\
 $character"""
 
+[palettes.catppuccin]
+blue = "#89B4FA"
+peach = "#FAB387"
+green = "#A6E3A1"
+teal = "#94E2D5"
+purple = "#CBA6F7"
+crust = "#11111B"
+
 [os]
 disabled = false
-style = "bg:blue fg:white"
+style = "bg:blue fg:crust"
 
 [os.symbols]
 Fedora = " "
@@ -37,8 +46,8 @@ Windows = "󰍲 "
 
 [username]
 show_always = true
-style_user = "bg:blue fg:white"
-style_root = "bg:blue fg:white"
+style_user = "bg:blue fg:crust"
+style_root = "bg:blue fg:crust"
 format = '[ $user ]($style)'
 disabled = false
 
@@ -93,13 +102,3 @@ format = '[ ♥ $time ]($style)'
 [character]
 success_symbol = "[❯](bold green)"
 error_symbol = "[❯](bold red)"
-
-palette = "catppuccin"
-
-[palettes.catppuccin]
-blue = "#89B4FA"
-peach = "#FAB387"
-green = "#A6E3A1"
-teal = "#94E2D5"
-purple = "#CBA6F7"
-crust = "#11111B"
