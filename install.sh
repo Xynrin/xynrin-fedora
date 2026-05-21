@@ -100,8 +100,12 @@ select_modules_via_fzf() {
         --border=rounded \
         --border-label="  选择要执行的模块  " \
         --border-label-pos=3 \
-        --header="TAB 切换 / Ctrl-A 全选 / Enter 确认" \
-        --bind 'load:select-all,ctrl-a:select-all,ctrl-d:deselect-all' \
+        --info=inline-right \
+        --prompt="搜索 ❯ " \
+        --header="Enter 开始 · TAB 切换 · Ctrl-A 全选 · Ctrl-D 全不选" \
+        --bind 'start:select-all' \
+        --bind 'ctrl-a:select-all' \
+        --bind 'ctrl-d:deselect-all' \
         --preview 'echo {} | cut -f3' \
         --preview-window=down:2:wrap \
         --color="fg:#cdd6f4,bg:-1,hl:#f9e2af,fg+:#cdd6f4,bg+:#313244,hl+:#f9e2af" \
