@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # install.sh — xynrin-fedora 主入口
-# FZF 菜单选模块 → 依次执行
 
 set -uo pipefail
 
@@ -18,17 +17,23 @@ usage() {
 用法: $0 [--only STEP[,STEP...]] [--dry-run] [--all]
 
 可选模块（默认弹 FZF 菜单多选）:
-  kde-theme   KDE 视觉主题（Breeze Dark / Papirus 图标 / 壁纸）
+  kde-theme   KDE 视觉主题（Breeze Dark / Papirus 图标 / 壁纸 / GTK 跟随）
   fonts-cjk   中文字体 + fcitx5 拼音
   terminal    fish + starship + eza/bat/zoxide/fzf/fastfetch
   apps        常用软件（浏览器 / 音视频 / 办公 / 通讯）
+  gpu         显卡驱动（自动识别 NVIDIA / AMD / Intel）
 
 说明:
   * repos 模块（RPM Fusion + Flathub）始终执行，是前置。
   * cleanup 模块（隐藏无用图标）最后自动跑。
-  * --all       跳过菜单，全量执行
+  * --all       跳过菜单，全量执行（也跳过 confirm 提示）
   * --only X    跳过菜单，只跑 X（可逗号分隔多个）
   * --dry-run   只打印要执行的命令，不真动
+
+环境变量:
+  XF_DOTFILES_FORCE=0   保留宿主机已有 dotfiles（默认 1，强刷+备份）
+  XF_BACKUP_DIR         dotfiles 备份目录（默认 ~/.config/.xynrin-backup）
+  XF_SKIP_CN_MIRROR=1   跳过 TUNA 镜像切换
 EOF
 }
 
@@ -36,14 +41,13 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --only)    [[ $# -lt 2 ]] && { error "--only 需要一个值"; usage; exit 2; }
                    ONLY="$2"; shift 2 ;;
-        --all)     ONLY="ALL"; shift ;;
+        --all)     ONLY="ALL"; export XF_NONINTERACTIVE=1; shift ;;
         --dry-run) export DRY_RUN=1; shift ;;
         -h|--help) usage; exit 0 ;;
         *)         error "未知参数: $1"; usage; exit 2 ;;
     esac
 done
 
-# 环境前置检查
 if [[ $EUID -eq 0 ]]; then
     error "请以普通用户运行（脚本内部会按需 sudo）"
     exit 1
@@ -56,32 +60,27 @@ detect_target_user
 # ===== Banner =====
 show_banner() {
     clear
-    printf "${H_PURPLE}${BOLD}"
-    cat <<'BANNER'
-
-   __  __ __   __ _  _ ___  ___ _  _     ___ ___ ___   ___  ___    _
-   \ \/ / \ \ / / \| | _ \|_ _| \| |   | __| __|   \ / _ \| _ \  /_\
-    >  <   \ V /| .` |   / | || .` |   | _|| _|| |) | (_) |   / / _ \
-   /_/\_\   |_| |_|\_|_|_\|___|_|\_|   |_| |___|___/ \___/|_|_\/_/ \_\
-
-BANNER
-    printf "${NC}"
-    printf "${H_GRAY}   Fedora KDE 一键美化 — 新机从零到好看好用${NC}\n\n"
+    echo ""
+    echo -e "${C1}    ╭───────────────────────────────────────────────────────╮${NC}"
+    echo -e "${C1}    │${NC}                                                       ${C1}│${NC}"
+    echo -e "${C1}    │${NC}     ${C2}╳${C3}╳ ${BOLD}xynrin-fedora${NC}                                ${C1}│${NC}"
+    echo -e "${C1}    │${NC}     ${DIM}Fedora KDE 一键美化 · fish / starship / cjk${NC}      ${C1}│${NC}"
+    echo -e "${C1}    │${NC}                                                       ${C1}│${NC}"
+    echo -e "${C1}    ╰───────────────────────────────────────────────────────╯${NC}"
+    echo ""
 }
 
 # ===== 模块定义 =====
-# 格式: <ID>|<脚本>|<中文标题>|<描述>
 MODULES=(
-    "kde-theme|20-kde-theme.sh|KDE 视觉主题|深色 Breeze + Papirus 图标 + 壁纸"
-    "fonts-cjk|30-fonts-cjk.sh|中文字体+输入法|思源/Noto + fcitx5 拼音"
+    "kde-theme|20-kde-theme.sh|KDE 视觉主题|Breeze Dark · Papirus · GTK 跟随"
+    "fonts-cjk|30-fonts-cjk.sh|中文字体+输入法|Noto CJK + fcitx5 拼音"
     "terminal|40-terminal.sh|终端美化|fish + starship + 现代 CLI"
-    "apps|50-apps.sh|常用软件|浏览器/音视频/办公/通讯 FZF 选装"
-    "gpu|60-gpu.sh|显卡驱动|NVIDIA akmod / AMD mesa-freeworld / Intel VAAPI"
+    "apps|50-apps.sh|常用软件|浏览器/音视频/办公/通讯"
+    "gpu|60-gpu.sh|显卡驱动|NVIDIA / AMD / Intel 自动"
 )
 MANDATORY_PRE="10-repos.sh"
 MANDATORY_POST="90-cleanup.sh"
 
-# ===== 选模块 =====
 select_modules_via_fzf() {
     local items=()
     for m in "${MODULES[@]}"; do
@@ -89,7 +88,7 @@ select_modules_via_fzf() {
         local script="${rest%%|*}"; rest="${rest#*|}"
         local title="${rest%%|*}"; rest="${rest#*|}"
         local desc="$rest"
-        items+=("$(printf '%-14s %s\t%s\t%s' "$title" "[$id]" "$id" "$desc")")
+        items+=("$(printf '%-22s %s\t%s\t%s' "$title" "[$id]" "$id" "$desc")")
     done
 
     local out
@@ -99,21 +98,23 @@ select_modules_via_fzf() {
         --with-nth=1 \
         --layout=reverse \
         --border=rounded \
-        --border-label="  选择要执行的模块 (TAB 切换 / Enter 确认 / Ctrl-A 全选)  " \
-        --border-label-pos=5 \
-        --header="默认全选 · TAB 切换勾选 · Enter 开始安装" \
+        --border-label="  选择要执行的模块  " \
+        --border-label-pos=3 \
+        --header="TAB 切换 / Ctrl-A 全选 / Enter 确认" \
         --bind 'load:select-all,ctrl-a:select-all,ctrl-d:deselect-all' \
         --preview 'echo {} | cut -f3' \
-        --preview-window=down:3:wrap \
-        --color="marker:cyan,pointer:cyan,label:yellow" \
-        --pointer=">" \
-        --height=50%) || return 1
+        --preview-window=down:2:wrap \
+        --color="fg:#cdd6f4,bg:-1,hl:#f9e2af,fg+:#cdd6f4,bg+:#313244,hl+:#f9e2af" \
+        --color="info:#89b4fa,prompt:#cba6f7,pointer:#cba6f7,marker:#a6e3a1,spinner:#94e2d5" \
+        --color="header:#94e2d5,border:#cba6f7,label:#f5c2e7" \
+        --pointer="❯" \
+        --marker="✓" \
+        --height=60%) || return 1
 
     [[ -z "$out" ]] && return 1
     awk -F'\t' '{print $2}' <<< "$out" | tr '\n' ',' | sed 's/,$//'
 }
 
-# 解析 ONLY / 菜单，输出要跑的模块 ID（空格分隔）
 resolve_modules() {
     local picked=""
     if [[ "$ONLY" == "ALL" ]]; then
@@ -137,10 +138,12 @@ run_script() {
 
 # ===== 执行 =====
 show_banner
-[[ $DRY_RUN -eq 1 ]] && warn "DRY-RUN 模式，不真动"
+[[ $DRY_RUN -eq 1 ]] && warn "DRY-RUN 模式：仅预览不真动"
 
-log "目标用户: $TARGET_USER ($HOME_DIR)"
-log "日志: $XF_LOG_FILE"
+info_kv "目标用户" "$TARGET_USER" "($HOME_DIR)"
+info_kv "Fedora" "$(xf_fedora_version)" "$XF_DNF"
+info_kv "日志" "$XF_LOG_FILE"
+info_kv "备份" "$HOME_DIR/.config/.xynrin-backup"
 
 picked=$(resolve_modules)
 picked_trim=$(echo "$picked" | xargs)
@@ -148,7 +151,6 @@ picked_trim=$(echo "$picked" | xargs)
 
 info_kv "已选模块" "$picked_trim"
 
-# 提升权限（若非 dry-run）
 SUDO_KEEPALIVE_PID=""
 cleanup() {
     [[ -n "$SUDO_KEEPALIVE_PID" ]] && kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
@@ -156,29 +158,30 @@ cleanup() {
 trap cleanup EXIT
 
 if [[ $DRY_RUN -eq 0 ]]; then
-    log "即将申请一次 sudo 权限（之后后台续期，全程不再问密码）"
+    log "申请 sudo 权限（之后后台续期，全程不再问密码）"
     sudo -v || { error "sudo 不可用"; exit 1; }
     ( while true; do sudo -n true 2>/dev/null || exit; sleep 50; done ) &
     SUDO_KEEPALIVE_PID=$!
 fi
 
-# 计算总步数（在执行前置之前就算好，section 标题要用）
-total=0
+# 计算总步数
+total=2  # repos + cleanup 是默认步骤
 for m in "${MODULES[@]}"; do
     mod_id="${m%%|*}"
     [[ " $picked_trim " == *" $mod_id "* ]] && total=$((total + 1))
 done
 current=0
 
-# 前置必跑
-section "前置 [0/$total]" "配置软件源（RPM Fusion + Flathub）"
+# 前置：软件源
+current=$((current + 1))
+step "$current" "$total" "软件源（RPM Fusion + Flathub）"
 run_script "$MANDATORY_PRE" || { error "前置失败，终止"; exit 1; }
+step_end
 
-# 国内镜像（检测 Asia/Shanghai 时区自动触发，其他时区自动跳）
-section "前置 [0/$total]" "国内镜像检测"
+# 国内镜像（自动检测，非 CN 时区直接跳）
 run_script "15-cn-mirror.sh" || warn "镜像切换异常，继续使用默认"
 
-# 执行所选模块（按定义顺序）
+# 模块（按定义顺序）
 for m in "${MODULES[@]}"; do
     mod_id="${m%%|*}"
     rest="${m#*|}"
@@ -188,19 +191,25 @@ for m in "${MODULES[@]}"; do
 
     if [[ " $picked_trim " == *" $mod_id "* ]]; then
         current=$((current + 1))
-        section "[$current/$total] $title" "$script"
-        run_script "$script" || warn "模块 $mod_id 执行异常，继续下一个"
+        step "$current" "$total" "$title"
+        run_script "$script" || warn "模块 $mod_id 异常，继续下一个"
+        step_end
     fi
 done
 
 # 收尾
-section "收尾" "清理 + 提示"
+current=$((current + 1))
+step "$current" "$total" "收尾"
 run_script "$MANDATORY_POST" || true
+step_end
 
 echo ""
-echo -e "${H_GREEN}╔══════════════════════════════════════════════════════╗${NC}"
-echo -e "${H_GREEN}║              xynrin-fedora 安装完成                  ║${NC}"
-echo -e "${H_GREEN}╚══════════════════════════════════════════════════════╝${NC}"
+echo -e "${C4}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "  ${TICK} ${BOLD}${H_GREEN}xynrin-fedora 安装完成${NC}"
+echo -e "${C4}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
-dim "日志已存到 $XF_LOG_FILE"
-log "部分改动（字体/输入法/shell/主题）需要注销重登或重启才完全生效"
+dim "日志：$XF_LOG_FILE"
+dim "备份：$HOME_DIR/.config/.xynrin-backup"
+[[ -n "${XF_FAILED_PKGS:-}" ]] && warn "未装上的包：${XF_FAILED_PKGS}"
+log "字体 / 输入法 / shell / 主题需要 ${BOLD}注销重登${NC} 或重启才完全生效"
+echo ""
