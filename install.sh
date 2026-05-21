@@ -50,6 +50,7 @@ usage() {
   XF_BACKUP_DIR         备份目录（默认 ~/.config/.xynrin-backup）
   XF_SKIP_CN_MIRROR=1   跳过 TUNA 镜像切换
   XF_NONINTERACTIVE=1   非交互（CI 用）
+  XF_AGREE=1            预先同意免责声明（自动化场景，不弹同意书）
 EOF
 }
 
@@ -187,8 +188,83 @@ run_script() {
     bash "$path"
 }
 
+# ===== 免责声明 =====
+show_disclaimer() {
+    # 非交互（CI / --all）跳过提示，但日志里仍留痕迹
+    if [[ "${XF_NONINTERACTIVE:-0}" == "1" ]]; then
+        _write_log DISCLAIMER "non-interactive mode: implicit acceptance"
+        return 0
+    fi
+
+    # DRY-RUN 也不必弹（不会真动机器）
+    if [[ ${DRY_RUN:-0} -eq 1 ]]; then
+        return 0
+    fi
+
+    # 用户标记跳过（高级用户重复执行时设置）
+    if [[ "${XF_AGREE:-0}" == "1" ]]; then
+        _write_log DISCLAIMER "XF_AGREE=1: skipped"
+        return 0
+    fi
+
+    echo ""
+    echo -e "${C1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e " ${BOLD}${H_YELLOW}⚠  免责声明 / Disclaimer${NC}"
+    echo -e "${C1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "  本脚本会对你的 Fedora 系统进行下列${BOLD}有写入和潜在破坏性${NC}的操作："
+    echo ""
+    echo -e "    ${C5}•${NC} 启用第三方软件源（${BOLD}RPM Fusion${NC} free / nonfree、${BOLD}Flathub${NC}）"
+    echo -e "    ${C5}•${NC} 安装/替换系统包（mesa-freeworld、akmod-nvidia 等）"
+    echo -e "    ${C5}•${NC} 写入 ${BOLD}~/.config/${NC}（KDE / fish / starship / fcitx5 / GTK 等）"
+    echo -e "    ${C5}•${NC} 询问后修改默认 shell 为 ${BOLD}fish${NC}（chsh）"
+    echo -e "    ${C5}•${NC} 下载 Nerd Fonts、KDE 主题等资源到 ${BOLD}~/.local/share/${NC}"
+    echo -e "    ${C5}•${NC} 修改 SDDM 登录界面主题"
+    echo -e "    ${C5}•${NC} 写 ${BOLD}~/.local/bin/${NC}（up / xynrin / xf-* 工具脚本）"
+    echo ""
+    echo -e "  ${BOLD}${H_GREEN}保护机制${NC}"
+    echo -e "    ${TICK} 所有覆盖前自动备份到 ${DIM}~/.config/.xynrin-backup/${NC}"
+    echo -e "    ${TICK} 默认 shell 切换会${BOLD}单独询问${NC}（默认 ${BOLD}Y${NC}，可拒绝）"
+    echo -e "    ${TICK} 任何一步报错都会写日志：${DIM}$XF_LOG_FILE${NC}"
+    echo -e "    ${TICK} 失败的软件清单：${DIM}~/Documents/xynrin-fedora-install-failed.txt${NC}"
+    echo -e "    ${TICK} 美化卸载与备份还原内置在 TUI（${BOLD}xynrin${NC}）"
+    echo ""
+    echo -e "  ${BOLD}${H_RED}风险声明${NC}"
+    echo -e "    ${CROSS} 本项目以 ${BOLD}GPL-v3${NC} 发布，按 ${BOLD}\"现状\"${NC} 提供，${BOLD}不附带任何明示或暗示的担保${NC}"
+    echo -e "    ${CROSS} 作者不对因使用本脚本造成的${BOLD}数据丢失 / 系统不可启动 / 其他损失${NC}承担责任"
+    echo -e "    ${CROSS} 在生产 / 工作机上运行前，请确保${BOLD}已备份重要数据${NC}"
+    echo -e "    ${CROSS} 你须自行评估各步骤的影响，并对自己执行的操作负责"
+    echo ""
+    echo -e "  ${DIM}详细说明请阅读: https://github.com/Xynrin/xynrin-fedora/wiki${NC}"
+    echo -e "${C1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+
+    # 显式同意：必须输入 yes / y / 同意 才放行；其它一律视为拒绝
+    local ans
+    while true; do
+        read -r -p "$(echo -e "  ${BOLD}${C3}❯${NC} 我已阅读并${BOLD}同意上述免责声明${NC}，继续安装? (输入 ${BOLD}yes${NC} 同意 / ${BOLD}no${NC} 取消): ")" ans
+        case "${ans,,}" in
+            yes|y|同意)
+                _write_log DISCLAIMER "user accepted: $ans"
+                echo -e "  ${TICK} ${H_GREEN}已同意，开始安装${NC}"
+                echo ""
+                return 0
+                ;;
+            no|n|不同意|"")
+                _write_log DISCLAIMER "user declined: ${ans:-empty}"
+                echo -e "  ${CROSS} ${H_YELLOW}已取消（未做任何修改）${NC}"
+                exit 0
+                ;;
+            *)
+                echo -e "  ${WARN_SYM} 请输入 ${BOLD}yes${NC} 或 ${BOLD}no${NC}"
+                ;;
+        esac
+    done
+}
+
 # ===== 执行 =====
 show_banner
+show_disclaimer
 [[ $DRY_RUN -eq 1 ]] && warn "DRY-RUN 模式：仅预览不真动"
 
 info_kv "目标用户" "$TARGET_USER" "($HOME_DIR)"

@@ -50,6 +50,12 @@ esac
 log "xynrin-fedora — Fedora $fedver KDE 一键美化"
 log "分支: $BRANCH  目标: $TARGET_DIR"
 
+# ===== 4. 初步免责提示（详细版在 install.sh 弹出） =====
+if [[ "${XF_AGREE:-0}" != "1" ]]; then
+    printf "${Y}  !${N} 本脚本将启用第三方源 / 安装包 / 写 ~/.config，详细同意书会在下一步弹出\n"
+    printf "${Y}  !${N} 项目以 GPL-v3 发布，按「现状」提供，不附带担保（详见 LICENSE 与 wiki）\n"
+fi
+
 # ===== 4. 装基础依赖（静默） =====
 missing=()
 for c in curl tar fzf rsync git; do

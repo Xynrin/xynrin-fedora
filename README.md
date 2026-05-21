@@ -27,6 +27,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/Xynrin/xynrin-fedora/main/bo
 > - 请用**普通用户**运行（不要 `sudo bash …`），脚本内部会按需申请 sudo 密码
 > - 仅支持 **Fedora**（非 Fedora 系统会立即退出），推荐 **Fedora 44**
 > - 全程 ~15 分钟，破坏性操作（如更换默认 shell）会先征求同意
+> - 启动后会显示**免责声明**，需输入 `yes` 显式同意才会继续
 
 ```mermaid
 flowchart LR
@@ -137,6 +138,7 @@ xynrin
 | `XF_BACKUP_DIR` | `~/.config/.xynrin-backup` | 备份目录 |
 | `XF_SKIP_CN_MIRROR` | `0` | 设 `1` 跳过 TUNA 镜像切换（境外用户） |
 | `XF_NONINTERACTIVE` | `0` | `--all` 自动设 `1`，跳过所有 confirm |
+| `XF_AGREE` | `0` | 设 `1` 跳过免责声明确认（自动化场景） |
 
 ---
 

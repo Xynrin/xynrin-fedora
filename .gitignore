@@ -28,3 +28,6 @@ ssh/
 
 # git config (usually contains user.email)
 git/config
+
+# Wiki workspace（单独 git repo, 不放主仓库）
+wiki-tmp/
