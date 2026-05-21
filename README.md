@@ -147,7 +147,6 @@ xynrin
 - **Fedora 44** KDE Spin（41+ 兼容，但以 44 为基线）
 - 普通用户（UID ≥ 1000），不能用 root 直接跑
 - x86_64 / aarch64
-- 能访问外网（github / flathub / rpmfusion）
 
 ---
 
