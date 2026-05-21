@@ -17,9 +17,18 @@ bash <(curl -fsSL https://raw.githubusercontent.com/Xynrin/xynrin-fedora/main/bo
 | **repos**（必做） | 启用 RPM Fusion free/nonfree + Flathub |
 | **kde-theme** | Breeze Dark + Papirus 图标 + Fedora 壁纸 |
 | **fonts-cjk** | 思源/Noto CJK + JetBrains Mono + fcitx5 拼音 |
-| **terminal** | fish + starship + eza/bat/zoxide/fzf/fastfetch，默认 shell 切 fish |
+| **terminal** | fish + starship + eza/bat/zoxide/fzf/fastfetch；conf.d/functions 拆分；注册 `~/.local/bin` 工具脚本 |
 | **apps** | FZF 多选面板装浏览器/音视频/办公/通讯等（dnf + flatpak） |
 | **cleanup** | 隐藏用不到的开发工具 `.desktop` 图标，桌面丢一份使用说明 |
+
+## 顺手的命令（装在 `~/.local/bin`，fish/bash 都能用）
+
+| 命令 | 作用 |
+|------|------|
+| `xf-update` | 一把梭：`dnf + flatpak + fwupdmgr` |
+| `xf-clean`  | 清理：autoremove + journal + flatpak 未用 runtime |
+| `xf-theme dark\|light` | 命令行切 KDE + GTK 主题 |
+| `xf-info` | 系统状态摘要：内核 / DE / GPU / 包数量 / 失败记录 |
 
 ## 命令参考
 
@@ -55,8 +64,10 @@ A: `/tmp/xynrin-fedora-install.log`
 ## 自定义
 
 - 加/减软件 → 改 `applist-kde.txt` / `applist-common.txt`
-- 改 fish 配置 → `kde-dotfiles/.config/fish/config.fish`
+- 改 fish 行为 → `kde-dotfiles/.config/fish/conf.d/*.fish`（别名/缩写/环境变量分文件）
+- 加 fish 自定义函数 → `kde-dotfiles/.config/fish/functions/<name>.fish`（按需加载）
 - 改 starship 提示符 → `kde-dotfiles/.config/starship.toml`
+- 加 `~/.local/bin` 工具 → `kde-dotfiles/.local/bin/<name>`，会自动 chmod +x 部署
 - 加模块 → `scripts/NN-xxx.sh` + `install.sh` 的 `MODULES` 数组里加一行
 
 ## License
