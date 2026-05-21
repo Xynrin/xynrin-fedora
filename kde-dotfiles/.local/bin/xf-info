@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# xf-info — 一键查看系统状态摘要
+
+set -euo pipefail
+
+bar() { printf '\033[1;35m──[ %s ]──\033[0m\n' "$1"; }
+
+bar "OS"
+. /etc/os-release && echo "$PRETTY_NAME ($VARIANT_ID, kernel $(uname -r))"
+
+bar "Plasma / DE"
+echo "Desktop: ${XDG_CURRENT_DESKTOP:-unknown} / Session: ${XDG_SESSION_TYPE:-unknown}"
+command -v plasmashell >/dev/null && plasmashell --version || true
+
+bar "GPU"
+lspci -nn | grep -iE 'vga|3d|display' || echo "(none)"
+
+bar "包数量"
+DNF="dnf"; command -v dnf5 >/dev/null && DNF="dnf5"
+echo "rpm:     $(rpm -qa | wc -l)"
+command -v flatpak >/dev/null && echo "flatpak: $(flatpak list --app 2>/dev/null | wc -l)" || true
+
+bar "失败的安装记录"
+fail="$HOME/Documents/xynrin-fedora-install-failed.txt"
+if [[ -f "$fail" ]]; then
+    tail -n 20 "$fail"
+else
+    echo "(无)"
+fi
+
+bar "最近一次 xynrin-fedora 日志"
+log="/tmp/xynrin-fedora-install.log"
+if [[ -f "$log" ]]; then
+    tail -n 10 "$log"
+else
+    echo "(无)"
+fi

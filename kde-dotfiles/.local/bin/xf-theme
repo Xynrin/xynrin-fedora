@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# xf-theme — 一键切 KDE + GTK 主题
+# Usage: xf-theme dark|light
+
+set -euo pipefail
+
+mode="${1:-dark}"
+
+case "$mode" in
+    dark)
+        scheme="BreezeDark"; lnf="org.kde.breezedark.desktop"; icons="Papirus-Dark"; gtk_dark=1; gtk_theme="Breeze-Dark" ;;
+    light)
+        scheme="BreezeLight"; lnf="org.kde.breeze.desktop";    icons="Papirus-Light"; gtk_dark=0; gtk_theme="Breeze" ;;
+    -h|--help|"")
+        echo "Usage: xf-theme dark|light"; exit 0 ;;
+    *)
+        echo "未知模式: $mode（只接受 dark / light）" >&2; exit 2 ;;
+esac
+
+# Plasma：优先 plasma-apply-*（一并通知 plasmashell）
+if command -v plasma-apply-lookandfeel >/dev/null 2>&1; then
+    plasma-apply-lookandfeel -a "$lnf" >/dev/null 2>&1 || true
+fi
+if command -v plasma-apply-colorscheme >/dev/null 2>&1; then
+    plasma-apply-colorscheme "$scheme" >/dev/null 2>&1 || true
+fi
+if command -v plasma-apply-cursortheme >/dev/null 2>&1; then
+    plasma-apply-cursortheme Breeze_Snow >/dev/null 2>&1 || true
+fi
+
+# 找不到上面那些，回落到 kwriteconfig
+if ! command -v plasma-apply-colorscheme >/dev/null 2>&1; then
+    kw=""
+    for c in kwriteconfig6 kwriteconfig5; do
+        command -v "$c" >/dev/null && { kw="$c"; break; }
+    done
+    if [[ -n "$kw" ]]; then
+        for f in kdeglobals kdedefaults/kdeglobals; do
+            "$kw" --file "$f" --group General --key ColorScheme       "$scheme"
+            "$kw" --file "$f" --group KDE     --key LookAndFeelPackage "$lnf"
+            "$kw" --file "$f" --group Icons   --key Theme              "$icons"
+        done
+    fi
+fi
+
+# GTK
+gset() { command -v gsettings >/dev/null && gsettings set "$@" 2>/dev/null || true; }
+if [[ $gtk_dark -eq 1 ]]; then
+    gset org.gnome.desktop.interface color-scheme 'prefer-dark'
+else
+    gset org.gnome.desktop.interface color-scheme 'default'
+fi
+gset org.gnome.desktop.interface gtk-theme  "$gtk_theme"
+gset org.gnome.desktop.interface icon-theme "$icons"
+
+# settings.ini 改一下 prefer-dark
+for d in "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0"; do
+    [[ -f "$d/settings.ini" ]] || continue
+    sed -i "s/^gtk-application-prefer-dark-theme=.*/gtk-application-prefer-dark-theme=$gtk_dark/" "$d/settings.ini"
+    sed -i "s|^gtk-theme-name=.*|gtk-theme-name=$gtk_theme|" "$d/settings.ini"
+    sed -i "s|^gtk-icon-theme-name=.*|gtk-icon-theme-name=$icons|" "$d/settings.ini"
+done
+
+# KWin 重载（窗口装饰、标题栏色彩）
+for q in qdbus6 qdbus; do
+    if command -v "$q" >/dev/null 2>&1; then
+        "$q" org.kde.KWin /KWin reconfigure 2>/dev/null || true
+        break
+    fi
+done
+
+echo "已切到 $mode 主题（GTK 应用可能需要重启窗口）"

@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# xf-clean — 清理：旧内核、孤立包、journal、flatpak 未用 runtime、用户缓存
+# Usage: xf-clean [--dry-run]
+
+set -euo pipefail
+
+DRY=0
+[[ "${1:-}" == "--dry-run" ]] && DRY=1
+
+DNF="dnf"
+command -v dnf5 >/dev/null 2>&1 && DNF="dnf5"
+
+run() {
+    echo "+ $*"
+    [[ $DRY -eq 1 ]] && return 0
+    "$@" || true
+}
+
+echo "==> $DNF autoremove"
+run sudo "$DNF" autoremove -y
+
+echo "==> 清理 dnf 缓存"
+run sudo "$DNF" clean all
+
+echo "==> journalctl vacuum 200M"
+run sudo journalctl --vacuum-size=200M
+
+if command -v flatpak >/dev/null 2>&1; then
+    echo "==> flatpak 清理未引用 runtime"
+    run flatpak uninstall --unused -y
+fi
+
+# 用户缓存：保留 7 天以上的 ~/.cache 大文件提示，不直接删
+if [[ -d "$HOME/.cache" ]]; then
+    echo "==> ~/.cache 大于 100M 的目录（手动决定要不要删）"
+    du -sh "$HOME/.cache"/* 2>/dev/null | awk '$1 ~ /[0-9]+G|[0-9]{3,}M/' || true
+fi
+
+echo "==> done"

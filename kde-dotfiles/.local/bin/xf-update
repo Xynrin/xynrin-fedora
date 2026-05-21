@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# xf-update — 一把梭更新：dnf + flatpak + 固件
+# Usage: xf-update [--no-fwupd]
+
+set -euo pipefail
+
+NO_FWUPD=0
+for a in "$@"; do
+    case "$a" in
+        --no-fwupd) NO_FWUPD=1 ;;
+        -h|--help)  echo "Usage: xf-update [--no-fwupd]"; exit 0 ;;
+    esac
+done
+
+DNF="dnf"
+command -v dnf5 >/dev/null 2>&1 && DNF="dnf5"
+
+echo "==> $DNF upgrade --refresh"
+sudo "$DNF" upgrade -y --refresh
+
+if command -v flatpak >/dev/null 2>&1; then
+    echo "==> flatpak update"
+    flatpak update -y || true
+fi
+
+if [[ $NO_FWUPD -eq 0 ]] && command -v fwupdmgr >/dev/null 2>&1; then
+    echo "==> fwupdmgr refresh && update"
+    sudo fwupdmgr refresh --force || true
+    sudo fwupdmgr update -y || true
+fi
+
+echo "==> done"
