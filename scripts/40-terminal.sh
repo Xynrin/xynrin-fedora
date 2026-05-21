@@ -55,6 +55,14 @@ if [[ -d "$SETUP_DIR/kde-dotfiles/.local/bin" ]]; then
         --exec
 fi
 
+# ---- 文档 + VERSION（让 xf-help / xf-self-update 能离线用）----
+log "部署 VERSION + 命令速查文档"
+mkdir -p "$HOME_DIR/.config/xynrin-fedora"
+[[ -f "$SETUP_DIR/VERSION" ]] && \
+    backup_and_copy "$SETUP_DIR/VERSION" "$HOME_DIR/.config/xynrin-fedora/VERSION"
+[[ -f "$SETUP_DIR/docs/COMMANDS.md" ]] && \
+    backup_and_copy "$SETUP_DIR/docs/COMMANDS.md" "$HOME_DIR/.config/xynrin-fedora/COMMANDS.md"
+
 # ---- bash 兜底 PATH ----
 ensure_local_bin_path_for_bash() {
     local rc="$HOME_DIR/.bashrc"
