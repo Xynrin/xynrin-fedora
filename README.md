@@ -11,7 +11,8 @@
 ![License](https://img.shields.io/badge/License-GPLv3-a6e3a1)
 ![Shell](https://img.shields.io/badge/Shell-fish%20%2B%20bobthefish-cba6f7)
 
-[一键安装](#-一键安装) · [TUI 入口](#-tui-入口) · [模块清单](#-模块清单) · [日常命令](#-日常命令) · [常见问题](#-常见问题)
+[一键安装](#-一键安装) · [TUI 入口](#-tui-入口) · [模块清单](#-模块清单) · [日常命令](#-日常命令) · [常见问题](#-常见问题)  
+📖 [Wiki](https://github.com/Xynrin/xynrin-fedora/wiki) · 🐛 [Issues](https://github.com/Xynrin/xynrin-fedora/issues) · 📦 [Releases](https://github.com/Xynrin/xynrin-fedora/releases)
 
 </div>
 
@@ -274,6 +275,6 @@ xynrin-fedora/
 
 如果对你有用，给个 ⭐ 鼓励一下
 
-📖 [Wiki](https://github.com/Xynrin/xynrin-fedora/wiki) · 🐛 [Issues](https://github.com/Xynrin/xynrin-fedora/issues) · 📦 [Releases](https://github.com/Xynrin/xynrin-fedora/releases)
+
 
 </div>
