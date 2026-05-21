@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
-# install.sh — xynrin-fedora 主入口
+# install.sh — xynrin-fedora 主入口（严格 7 步流程）
+#
+# 1. 环境检查（Fedora 版本 + 网络）
+# 2. 基础依赖（git/curl/wget/whiptail/fontconfig/fzf...）
+# 3. KDE 美化（交互式选择 3 套主题方案）
+# 4. Fish 安装与美化（fish + bobthefish + Nerd Fonts）
+# 5. 便捷脚本部署（~/.local/bin/up + ~/.local/bin/xynrin）
+# 6. TUI 主程序部署（xynrin 已在 5 中部署）
+# 7. 收尾与提示
 
 set -uo pipefail
 
@@ -9,7 +17,12 @@ export SETUP_DIR SCRIPTS_DIR
 export DRY_RUN=0
 ONLY=""
 
-# 版本号（VERSION 文件，xf-help / xf-self-update 也读这个）
+# 兼容 `curl ... | bash` 的"裸 install.sh"调用：发现自己不在仓库里，转发给 bootstrap
+if [[ ! -f "$SCRIPTS_DIR/00-utils.sh" ]]; then
+    echo "==> 检测到非仓库环境，自动回落 bootstrap 流程..."
+    exec bash <(curl -fsSL "https://raw.githubusercontent.com/Xynrin/xynrin-fedora/main/bootstrap.sh") "$@"
+fi
+
 XF_VERSION="dev"
 [[ -f "$SETUP_DIR/VERSION" ]] && XF_VERSION=$(<"$SETUP_DIR/VERSION")
 export XF_VERSION
@@ -21,24 +34,22 @@ usage() {
     cat <<EOF
 用法: $0 [--only STEP[,STEP...]] [--dry-run] [--all]
 
-可选模块（默认弹 FZF 菜单多选）:
-  kde-theme   KDE 视觉主题（Breeze Dark / Papirus 图标 / 壁纸 / GTK 跟随）
+模块（默认按 7 步全量执行）:
+  kde-theme   KDE 美化（3 套主题选 1）
   fonts-cjk   中文字体 + fcitx5 拼音
-  terminal    fish + starship + eza/bat/zoxide/fzf/fastfetch
-  apps        常用软件（浏览器 / 音视频 / 办公 / 通讯）
-  gpu         显卡驱动（自动识别 NVIDIA / AMD / Intel）
+  terminal    fish + bobthefish + Nerd Fonts + ~/.local/bin
+  apps        常用软件
+  gpu         显卡驱动
 
-说明:
-  * repos 模块（RPM Fusion + Flathub）始终执行，是前置。
-  * cleanup 模块（隐藏无用图标）最后自动跑。
-  * --all       跳过菜单，全量执行（也跳过 confirm 提示）
-  * --only X    跳过菜单，只跑 X（可逗号分隔多个）
-  * --dry-run   只打印要执行的命令，不真动
+  --all       跳过所有 confirm，全量执行
+  --only X    只跑指定模块（逗号分隔）
+  --dry-run   只预览不真动
 
 环境变量:
   XF_DOTFILES_FORCE=0   保留宿主机已有 dotfiles（默认 1，强刷+备份）
-  XF_BACKUP_DIR         dotfiles 备份目录（默认 ~/.config/.xynrin-backup）
+  XF_BACKUP_DIR         备份目录（默认 ~/.config/.xynrin-backup）
   XF_SKIP_CN_MIRROR=1   跳过 TUNA 镜像切换
+  XF_NONINTERACTIVE=1   非交互（CI 用）
 EOF
 }
 
@@ -53,12 +64,37 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# ========== 步骤 1：环境检查 ==========
 if [[ $EUID -eq 0 ]]; then
     error "请以普通用户运行（脚本内部会按需 sudo）"
     exit 1
 fi
-xf_is_fedora || { error "仅支持 Fedora"; exit 1; }
-command -v fzf >/dev/null 2>&1 || { error "缺少 fzf，请先 sudo dnf install -y fzf"; exit 1; }
+
+if ! xf_is_fedora; then
+    error "✗ 检测到非 Fedora 系统，本脚本仅支持 Fedora"
+    error "  在线脚本到此终止"
+    exit 1
+fi
+
+fedver=$(xf_fedora_version)
+if [[ "$fedver" -lt 41 ]]; then
+    warn "当前 Fedora $fedver，推荐 Fedora 44+，部分包名可能缺失"
+    if [[ "${XF_NONINTERACTIVE:-0}" != "1" ]]; then
+        read -r -p "$(echo -e "    ${C3}❯${NC} 继续? [y/N] ")" ans
+        [[ "${ans:-N}" =~ ^[Yy]$ ]] || { echo "取消"; exit 0; }
+    fi
+elif [[ "$fedver" -ne 44 ]]; then
+    dim "Fedora $fedver（项目以 Fedora 44 为基线，其它版本兼容）"
+fi
+
+# 网络检查
+if ! curl -fsI --max-time 8 https://github.com >/dev/null 2>&1; then
+    warn "GitHub 不可达，安装可能受影响"
+    if [[ "${XF_NONINTERACTIVE:-0}" != "1" ]]; then
+        read -r -p "$(echo -e "    ${C3}❯${NC} 继续? [y/N] ")" ans
+        [[ "${ans:-N}" =~ ^[Yy]$ ]] || exit 1
+    fi
+fi
 
 detect_target_user
 
@@ -69,19 +105,33 @@ show_banner() {
     echo -e "${C1}    ╭───────────────────────────────────────────────────────╮${NC}"
     echo -e "${C1}    │${NC}                                                       ${C1}│${NC}"
     echo -e "${C1}    │${NC}     ${C2}╳${C3}╳ ${BOLD}xynrin-fedora${NC} ${DIM}v${XF_VERSION}${NC}                          ${C1}│${NC}"
-    echo -e "${C1}    │${NC}     ${DIM}Fedora KDE 一键美化 · fish / starship / cjk${NC}      ${C1}│${NC}"
+    echo -e "${C1}    │${NC}     ${DIM}Fedora 44 KDE 一键美化 · 小白友好${NC}             ${C1}│${NC}"
     echo -e "${C1}    │${NC}                                                       ${C1}│${NC}"
     echo -e "${C1}    ╰───────────────────────────────────────────────────────╯${NC}"
     echo ""
 }
 
+# ========== 步骤 2：基础依赖 ==========
+install_base_deps() {
+    log "安装基础依赖（git / curl / wget / fzf / whiptail / fontconfig）"
+    local base_pkgs=(
+        git curl wget tar unzip rsync
+        fontconfig
+        newt        # whiptail
+        fzf
+        pciutils
+        ImageMagick # 用于横幅资源处理
+    )
+    dnf_install "${base_pkgs[@]}"
+}
+
 # ===== 模块定义 =====
 MODULES=(
-    "kde-theme|20-kde-theme.sh|KDE 视觉主题|Breeze Dark · Papirus · GTK 跟随"
+    "kde-theme|20-kde-theme.sh|KDE 美化|3 套主题方案选择"
     "fonts-cjk|30-fonts-cjk.sh|中文字体+输入法|Noto CJK + fcitx5 拼音"
-    "terminal|40-terminal.sh|终端美化|fish + starship + 现代 CLI"
-    "apps|50-apps.sh|常用软件|浏览器/音视频/办公/通讯"
-    "gpu|60-gpu.sh|显卡驱动|NVIDIA / AMD / Intel 自动"
+    "terminal|40-terminal.sh|终端美化|fish + bobthefish + Nerd Fonts"
+    "apps|50-apps.sh|常用软件|浏览器/音视频/办公"
+    "gpu|60-gpu.sh|显卡驱动|NVIDIA / AMD / Intel"
 )
 MANDATORY_PRE="10-repos.sh"
 MANDATORY_POST="90-cleanup.sh"
@@ -95,16 +145,11 @@ select_modules_via_fzf() {
         local desc="$rest"
         items+=("$(printf '%-22s %s\t%s\t%s' "$title" "[$id]" "$id" "$desc")")
     done
-
     local out
     out=$(printf '%s\n' "${items[@]}" | fzf \
-        --multi \
-        --delimiter=$'\t' \
-        --with-nth=1 \
-        --layout=reverse \
-        --border=rounded \
-        --border-label="  选择要执行的模块  " \
-        --border-label-pos=3 \
+        --multi --delimiter=$'\t' --with-nth=1 \
+        --layout=reverse --border=rounded \
+        --border-label="  选择要执行的模块  " --border-label-pos=3 \
         --info=inline-right \
         --prompt="搜索 ❯ " \
         --header="Enter 开始 · TAB 切换 · Ctrl-A 全选 · Ctrl-D 全不选" \
@@ -116,10 +161,7 @@ select_modules_via_fzf() {
         --color="fg:#cdd6f4,bg:-1,hl:#f9e2af,fg+:#cdd6f4,bg+:#313244,hl+:#f9e2af" \
         --color="info:#89b4fa,prompt:#cba6f7,pointer:#cba6f7,marker:#a6e3a1,spinner:#94e2d5" \
         --color="header:#94e2d5,border:#cba6f7,label:#f5c2e7" \
-        --pointer="❯" \
-        --marker="✓" \
-        --height=60%) || return 1
-
+        --pointer="❯" --marker="✓" --height=60%) || return 1
     [[ -z "$out" ]] && return 1
     awk -F'\t' '{print $2}' <<< "$out" | tr '\n' ',' | sed 's/,$//'
 }
@@ -157,7 +199,6 @@ info_kv "备份" "$HOME_DIR/.config/.xynrin-backup"
 picked=$(resolve_modules)
 picked_trim=$(echo "$picked" | xargs)
 [[ -z "$picked_trim" ]] && { warn "未选择任何模块，退出"; exit 0; }
-
 info_kv "已选模块" "$picked_trim"
 
 SUDO_KEEPALIVE_PID=""
@@ -173,15 +214,21 @@ if [[ $DRY_RUN -eq 0 ]]; then
     SUDO_KEEPALIVE_PID=$!
 fi
 
-# 计算总步数
-total=2  # repos + cleanup 是默认步骤
+# 计算总步数（基础依赖 + 软件源 + 选中模块 + 收尾）
+total=3
 for m in "${MODULES[@]}"; do
     mod_id="${m%%|*}"
     [[ " $picked_trim " == *" $mod_id "* ]] && total=$((total + 1))
 done
 current=0
 
-# 前置：软件源
+# 步骤 2：基础依赖
+current=$((current + 1))
+step "$current" "$total" "基础依赖"
+install_base_deps
+step_end
+
+# 前置：软件源（必跑）
 current=$((current + 1))
 step "$current" "$total" "软件源（RPM Fusion + Flathub）"
 run_script "$MANDATORY_PRE" || { error "前置失败，终止"; exit 1; }
@@ -190,14 +237,13 @@ step_end
 # 国内镜像（自动检测，非 CN 时区直接跳）
 run_script "15-cn-mirror.sh" || warn "镜像切换异常，继续使用默认"
 
-# 模块（按定义顺序）
+# 模块（按 MODULES 顺序：kde-theme → fonts-cjk → terminal → apps → gpu）
 for m in "${MODULES[@]}"; do
     mod_id="${m%%|*}"
     rest="${m#*|}"
     script="${rest%%|*}"
     rest="${rest#*|}"
     title="${rest%%|*}"
-
     if [[ " $picked_trim " == *" $mod_id "* ]]; then
         current=$((current + 1))
         step "$current" "$total" "$title"
@@ -212,13 +258,28 @@ step "$current" "$total" "收尾"
 run_script "$MANDATORY_POST" || true
 step_end
 
+# ========== 步骤 7：完成提示 ==========
 echo ""
 echo -e "${C4}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "  ${TICK} ${BOLD}${H_GREEN}xynrin-fedora 安装完成${NC}"
 echo -e "${C4}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
+echo -e "  ${BOLD}下一步${NC}"
+echo -e "    ${ARROW} 终端输入 ${BOLD}${C3}xynrin${NC} 打开 TUI 管理界面"
+echo -e "    ${ARROW} 终端输入 ${BOLD}${C3}up${NC} 一键更新系统"
+echo -e "    ${ARROW} ${DIM}注销重新登录（或 exec fish）让 fish + 字体生效${NC}"
+echo ""
 dim "日志：$XF_LOG_FILE"
 dim "备份：$HOME_DIR/.config/.xynrin-backup"
 [[ -n "${XF_FAILED_PKGS:-}" ]] && warn "未装上的包：${XF_FAILED_PKGS}"
-log "字体 / 输入法 / shell / 主题需要 ${BOLD}注销重登${NC} 或重启才完全生效"
+
+# 二维码（手机扫码看 wiki）
+qr_url="https://github.com/Xynrin/xynrin-fedora/wiki"
+if command -v qrencode >/dev/null 2>&1; then
+    echo ""
+    echo -e "    ${DIM}手机扫码查看 wiki：${NC}"
+    qrencode -t ANSIUTF8 "$qr_url" 2>/dev/null | sed 's/^/    /' || true
+else
+    echo -e "    ${DIM}wiki: $qr_url${NC}"
+fi
 echo ""

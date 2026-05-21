@@ -53,8 +53,8 @@ list_commands() {
         /^## / {
             name = $0
             sub(/^## /, "", name)
-            # 过滤元章节：只要以 xf- / bootstrap / install / 开头的，或者纯命令名
-            if (name ~ /^(xf-|bootstrap|install)/) print name
+            # 过滤元章节：只列入口命令名 xynrin / up / xf-* / bootstrap / install
+            if (name ~ /^(xf-|bootstrap|install|xynrin|up)$|^(xf-|bootstrap|install)/) print name
         }
     ' "$DOCS"
 }

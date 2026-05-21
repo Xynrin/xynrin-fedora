@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# up — xynrin-fedora 全面系统更新
+# dnf upgrade --refresh + flatpak update + 清理旧内核与缓存
+# 与小白友好的彩色 UI
+set -uo pipefail
+
+C1='\033[38;5;141m'; C2='\033[38;5;111m'; C3='\033[38;5;117m'; C4='\033[38;5;156m'; C5='\033[38;5;216m'
+BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
+TICK="${C4}✓${NC}"; WARN="${C5}!${NC}"; ARROW="${C2}❯${NC}"
+
+DNF="dnf"
+command -v dnf5 >/dev/null 2>&1 && DNF="dnf5"
+
+step() {
+    echo ""
+    echo -e "${C1}┌─${NC} ${BOLD}$1${NC}"
+}
+end()  { echo -e "${C1}└─${NC} ${DIM}done${NC}"; }
+say()  { echo -e "  ${ARROW} $*"; }
+ok()   { echo -e "  ${TICK} $*"; }
+warn() { echo -e "  ${WARN} $*"; }
+
+clear
+echo ""
+echo -e "${C1}╭───────────────────────────────────────────────────────╮${NC}"
+echo -e "${C1}│${NC}  ${BOLD}up${NC}  ${DIM}·${NC}  ${C3}xynrin-fedora 系统更新${NC}                       ${C1}│${NC}"
+echo -e "${C1}╰───────────────────────────────────────────────────────╯${NC}"
+
+step "更新 ${C3}dnf${NC} 软件包"
+say "$DNF upgrade --refresh"
+sudo "$DNF" upgrade --refresh -y && ok "dnf 更新完成" || warn "dnf 更新有错误，继续"
+end
+
+if command -v flatpak >/dev/null 2>&1; then
+    step "更新 ${C3}Flatpak${NC} 应用"
+    say "flatpak update"
+    flatpak update -y || warn "flatpak 更新有错误"
+    ok "flatpak 已是最新"
+    end
+fi
+
+step "清理${C3}旧内核与缓存${NC}"
+say "$DNF autoremove"
+sudo "$DNF" autoremove -y || true
+say "$DNF clean all"
+sudo "$DNF" clean all || true
+ok "缓存已清理"
+end
+
+if command -v fwupdmgr >/dev/null 2>&1; then
+    step "刷新${C3}固件元数据${NC}"
+    sudo fwupdmgr refresh --force >/dev/null 2>&1 || true
+    if sudo fwupdmgr get-updates >/dev/null 2>&1; then
+        say "发现固件更新，运行 fwupdmgr update 应用（可能需要重启）"
+    else
+        ok "固件已是最新"
+    fi
+    end
+fi
+
+echo ""
+echo -e "${C4}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "  ${TICK} ${BOLD}系统更新完毕${NC}"
+echo -e "${C4}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""

@@ -1,18 +1,17 @@
 <div align="center">
 
-# 🌸 xynrin-fedora
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=42&duration=3500&pause=600&color=CBA6F7&center=true&vCenter=true&width=600&lines=xynrin-fedora;Fedora+44+KDE+%E4%B8%80%E9%94%AE%E7%BE%8E%E5%8C%96;%E5%B0%8F%E7%99%BD+%C2%B7+%E5%8F%8B%E5%A5%BD" alt="title" />
 
-**Fedora KDE 一键美化 · 中文友好 · 模块化**
-
-刚装完 Fedora KDE Spin？一条命令把它变成好看、好用、带中文输入法和常用软件。
+**🌸 一条命令让 Fedora 44 KDE 变得好看、好用、带中文输入法 🌸**
 
 [![CI](https://github.com/Xynrin/xynrin-fedora/actions/workflows/ci.yml/badge.svg)](https://github.com/Xynrin/xynrin-fedora/actions/workflows/ci.yml)
-![Fedora](https://img.shields.io/badge/Fedora-41%2B-294172?logo=fedora&logoColor=white)
+[![Release](https://github.com/Xynrin/xynrin-fedora/actions/workflows/release.yml/badge.svg)](https://github.com/Xynrin/xynrin-fedora/releases)
+![Fedora](https://img.shields.io/badge/Fedora-44-294172?logo=fedora&logoColor=white)
 ![Plasma](https://img.shields.io/badge/Plasma-6.x-1d99f3?logo=kde&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-a6e3a1)
-![Shell](https://img.shields.io/badge/Shell-fish%20%2B%20bash-cba6f7)
+![License](https://img.shields.io/badge/License-GPLv3-a6e3a1)
+![Shell](https://img.shields.io/badge/Shell-fish%20%2B%20bobthefish-cba6f7)
 
-[一键安装](#-一键安装) · [模块清单](#-模块清单) · [日常命令](#-日常命令) · [常见问题](#-常见问题) · [自定义](#-自定义)
+[一键安装](#-一键安装) · [TUI 入口](#-tui-入口) · [模块清单](#-模块清单) · [日常命令](#-日常命令) · [常见问题](#-常见问题)
 
 </div>
 
@@ -25,31 +24,67 @@ bash <(curl -fsSL https://raw.githubusercontent.com/Xynrin/xynrin-fedora/main/bo
 ```
 
 > [!IMPORTANT]
-> 请用**普通用户**运行（不要 `sudo bash …`），脚本内部会按需申请一次 sudo 密码。
-> 这样 `~/.config` 才会落到你自己家里，不会污染 root。
-
-15 分钟内搞定。流程大致这样：
+> - 请用**普通用户**运行（不要 `sudo bash …`），脚本内部会按需申请 sudo 密码
+> - 仅支持 **Fedora**（非 Fedora 系统会立即退出），推荐 **Fedora 44**
+> - 全程 ~15 分钟，破坏性操作（如更换默认 shell）会先征求同意
 
 ```mermaid
 flowchart LR
-    A[bootstrap.sh] -->|拉仓库| B[install.sh]
-    B --> C{选模块}
-    C -->|FZF 多选| D[执行]
-    C -->|--all| D
-    D --> E[repos]
-    D --> F[kde-theme]
-    D --> G[fonts-cjk]
-    D --> H[terminal]
-    D --> I[apps]
-    D --> J[gpu]
-    E --> K[cleanup]
-    F --> K
-    G --> K
-    H --> K
-    I --> K
-    J --> K
-    K --> L[完成]
+    A[bootstrap.sh] --> B[检测 Fedora]
+    B -->|失败| X[退出]
+    B -->|通过| C[基础依赖]
+    C --> D[install.sh]
+    D --> E[KDE 美化<br/>3 套主题选 1]
+    E --> F[fish + bobthefish<br/>+ Nerd Fonts]
+    F --> G[~/.local/bin<br/>up + xynrin]
+    G --> H[完成]
+    H --> I[终端输入 xynrin<br/>打开 TUI]
 ```
+
+---
+
+## 🎨 KDE 美化方案（交互式三选一）
+
+| 编号 | 风格 | Plasma 主题 | 图标 | 光标 |
+|:---:|---|---|---|---|
+| **1** | 🌿 现代简约 | Layan | Tela | Bibata |
+| **2** | 🍬 绚丽多彩 | Sweet | Candy | Sweet |
+| **3** | 🌑 暗黑质感 | Orchis | Colloid | Nordic |
+
+安装时会列菜单，输入数字即可。SDDM 登录界面会同步换主题与背景。
+
+---
+
+## 🐠 Fish + bobthefish 圆角终端
+
+- 🐟 **fish** 安装并设为默认 shell（询问后再切，可拒）
+- 🪄 **fisher** + **bobthefish** 主题，原生圆角分段 + Nerd Font 图标
+- 🔤 **Nerd Fonts**：FiraCode / MesloLGS / JetBrainsMono 自动下载到 `~/.local/share/fonts`
+- 🚀 现代 CLI：eza / bat / zoxide / fzf / fastfetch / ripgrep / fd
+
+---
+
+## 🏠 TUI 入口
+
+部署完成后终端输入：
+
+```bash
+xynrin
+```
+
+弹出 fzf 驱动的 TUI，左列菜单 / 右列说明：
+
+| 菜单 | 作用 |
+|---|---|
+| 系统更新 | 调用 `up` 一键更新 dnf + flatpak + 清理 |
+| 软件安装 | 从 applist fzf 多选，dnf/flatpak 自动分流 |
+| 美化切换 | 重选 KDE 主题方案 |
+| 美化卸载 | 卸载主题包，恢复 Breeze |
+| 恢复初始 | 从 `~/.config/.xynrin-backup` 还原最近备份 |
+| 系统信息 | OS / 内核 / Plasma / GPU / 包数量摘要 |
+| 命令速查 | 浏览所有 `xf-*` 命令文档 |
+
+横幅由 [oh-my-logo](https://github.com/shinshin86/oh-my-logo) 在安装时生成并缓存到 `~/.config/xynrin-fedora/banner.ansi`，无 npx 时自动回落 ASCII 图形。
 
 ---
 
@@ -58,29 +93,29 @@ flowchart LR
 | 模块 | 默认 | 做什么 |
 |------|:---:|------|
 | **`repos`** | ✅ 必跑 | 启用 RPM Fusion free / nonfree + Flathub |
-| **`kde-theme`** | ✅ | Breeze Dark + Papirus 图标 + Fedora 壁纸 + GTK 跟随深色 |
+| **`kde-theme`** | ✅ | 3 套主题方案选 1，含 SDDM |
 | **`fonts-cjk`** | ✅ | Noto CJK + JetBrains Mono + fcitx5 拼音 |
-| **`terminal`** | ✅ | fish + starship + eza/bat/zoxide/fzf/fastfetch；conf.d/functions 标准布局 |
-| **`apps`** | ✅ | 浏览器 / 音视频 / 办公 / 通讯（dnf + flatpak），fzf 多选 |
-| **`gpu`** | ✅ | 显卡驱动（NVIDIA akmod / AMD mesa-freeworld / Intel VAAPI） |
-| **`cleanup`** | ✅ 兜底 | 隐藏开发工具 `.desktop` 图标，桌面投放使用说明 |
+| **`terminal`** | ✅ | fish + bobthefish + Nerd Fonts + ~/.local/bin |
+| **`apps`** | ✅ | 浏览器 / 音视频 / 办公 / 通讯 |
+| **`gpu`** | ✅ | NVIDIA akmod / AMD mesa-freeworld / Intel VAAPI |
+| **`cleanup`** | ✅ 兜底 | 隐藏开发工具图标，桌面投放使用说明 |
 
 ---
 
 ## 🛠️ 日常命令
 
-装在 `~/.local/bin/`，fish 和 bash 都能直接调。完整速查跑 **`xf-help`**（fzf TUI）。
-
 | 命令 | 一句话 |
 |------|------|
-| **`xf-help`** | fzf 命令速查 TUI，左列表 / 右说明，Enter 直接运行 |
-| **`xf-self-update`** | 拉最新仓库重部署 dotfiles，**升级首选** |
-| **`xf-update`** | 一把梭：dnf + flatpak + fwupdmgr |
-| **`xf-clean`** | autoremove + journal vacuum + flatpak unused |
-| **`xf-info`** | 系统状态摘要（贴 issue 时直接复制） |
+| **`xynrin`** | 打开 TUI 主入口（fzf 菜单） |
+| **`up`** | 一键更新：dnf + flatpak + 清理（小白友好彩色 UI） |
+| **`xf-help`** | fzf 驱动的命令速查 TUI |
+| **`xf-self-update`** | 拉最新仓库重新部署 |
+| **`xf-update`** | 进阶版更新（含 fwupdmgr 固件） |
+| **`xf-clean`** | 深度清理：autoremove + journal + flatpak unused |
+| **`xf-info`** | 系统状态摘要（贴 issue 用） |
 | **`xf-theme dark\|light`** | 命令行切 KDE + GTK 主题 |
 
-详细说明：[`docs/COMMANDS.md`](docs/COMMANDS.md) 或装好后 `xf-help`。
+完整文档：[`docs/COMMANDS.md`](docs/COMMANDS.md)
 
 ---
 
@@ -88,7 +123,7 @@ flowchart LR
 
 ```bash
 ./install.sh                   # 弹 FZF 菜单（默认全选）
-./install.sh --all             # 跳菜单，全装，所有 confirm 走默认值
+./install.sh --all             # 跳菜单，全装，所有 confirm 走默认
 ./install.sh --only apps       # 只装某个模块（逗号分隔可多个）
 ./install.sh --only kde-theme,fonts-cjk
 ./install.sh --dry-run         # 只预览，不真动
@@ -107,18 +142,17 @@ flowchart LR
 
 ## ✅ 系统要求
 
-- **Fedora 41+**（已在 Fedora 44 KDE Spin 测试，Plasma 6.6 + dnf5）
-- 其他 Spin 也能跑，KDE 模块对非 KDE 桌面会跳过
-- 能访问外网（脚本从 github / flathub / rpmfusion 拉资源）
-- **普通用户**（UID ≥ 1000），不能用 root 直接跑
-- x86_64 或 aarch64
+- **Fedora 44** KDE Spin（41+ 兼容，但以 44 为基线）
+- 普通用户（UID ≥ 1000），不能用 root 直接跑
+- x86_64 / aarch64
+- 能访问外网（github / flathub / rpmfusion）
 
 ---
 
 ## ❓ 常见问题
 
 <details>
-<summary><b>注销重登后输入法没反应？</b></summary>
+<summary><b>注销重登后输入法没反应</b></summary>
 
 ```bash
 pgrep -u $USER fcitx5 || setsid fcitx5 -d &
@@ -128,36 +162,29 @@ pgrep -u $USER fcitx5 || setsid fcitx5 -d &
 </details>
 
 <details>
-<summary><b>fish 装上但没颜色？</b></summary>
+<summary><b>fish 装上但没图标 / 颜色</b></summary>
 
-99% 是 starship 调色板没生效。检查：
+99% 是字体没装好或终端字体没切到 Nerd Font。
 
-```bash
-head ~/.config/starship.toml
-```
-
-`palette = "catppuccin"` 必须在**顶层**（不能在任何 `[xxx]` 表内）。如果不对：
-
-```bash
-xf-self-update
-```
-
-会强刷正确的配置（旧文件备份在 `~/.config/.xynrin-backup/`）。
+1. 检查字体：`fc-list | grep -i nerd`
+2. 终端（Konsole）→ 设置 → 编辑当前配置 → 外观 → 选择字体改为 `FiraCode Nerd Font` 或 `MesloLGS NF`
+3. 仍不行：`xf-self-update` 强刷配置
 </details>
 
 <details>
-<summary><b>KDE 主题没换？</b></summary>
+<summary><b>KDE 主题没换</b></summary>
 
 ```bash
-xf-theme dark
+# TUI 里走"美化切换"重选一次
+xynrin
+
+# 或者命令行
 setsid plasmashell --replace &
 ```
-
-第二条是后台重启 plasmashell（不会注销当前会话），让面板/小组件吃到新主题。
 </details>
 
 <details>
-<summary><b>默认 shell 换 fish 后想换回 bash？</b></summary>
+<summary><b>默认 shell 换 fish 后想换回 bash</b></summary>
 
 ```bash
 chsh -s /bin/bash
@@ -165,38 +192,31 @@ chsh -s /bin/bash
 </details>
 
 <details>
-<summary><b>装失败的软件在哪看？</b></summary>
+<summary><b>装失败的软件在哪看</b></summary>
 
 ```
 ~/Documents/xynrin-fedora-install-failed.txt
 ```
-
-带前缀（`dnf:` / `flatpak:`）。可以手动重试。
 </details>
 
 <details>
-<summary><b>安装日志？</b></summary>
+<summary><b>安装日志</b></summary>
 
 ```
 /tmp/xynrin-fedora-install.log
 ```
-
-或跑 `xf-info` 看末尾摘要。
 </details>
 
 <details>
-<summary><b>想回滚 dotfiles？</b></summary>
+<summary><b>想回滚 dotfiles</b></summary>
+
+打开 TUI → 恢复初始（仅适用于美化后没装其他软件的场景）
+
+或手动：
 
 ```bash
 ls ~/.config/.xynrin-backup/
-# 找到时间戳，例如 20260521-093045
-cp -a ~/.config/.xynrin-backup/<file>.20260521-093045.bak ~/.config/<file>
-```
-
-KDE 备份打包成 tar.gz：
-
-```bash
-tar -xzf ~/.config/.xynrin-backup/plasma-20260521-093045.tar.gz -C ~/.config/
+tar -xzf ~/.config/.xynrin-backup/plasma-*.tar.gz -C ~/.config/
 ```
 </details>
 
@@ -206,13 +226,13 @@ tar -xzf ~/.config/.xynrin-backup/plasma-20260521-093045.tar.gz -C ~/.config/
 
 | 想改 | 改哪里 |
 |---|---|
-| 加/减软件 | `applist-kde.txt` / `applist-common.txt`（行尾 `# 注释` 是 fzf 预览） |
-| fish 别名 / 缩写 / 环境变量 | `kde-dotfiles/.config/fish/conf.d/*.fish` |
-| 加 fish 自定义函数 | `kde-dotfiles/.config/fish/functions/<name>.fish`（按需加载） |
-| starship 提示符 | `kde-dotfiles/.config/starship.toml` |
-| 加 `xf-*` 工具 | `kde-dotfiles/.local/bin/<name>`，部署时自动 chmod +x |
-| 加新模块 | `scripts/NN-xxx.sh` + `install.sh` 的 `MODULES` 数组加一行 |
-| 命令文档 / `xf-help` 内容 | `docs/COMMANDS.md`（每个 `## xxx` 是一条命令） |
+| 加/减软件 | `applist-kde.txt` / `applist-common.txt` |
+| 加 KDE 主题方案 | `scripts/20-kde-theme.sh` 中 `THEME_OPTIONS` 数组 |
+| fish 别名 / 缩写 | `kde-dotfiles/.config/fish/conf.d/*.fish` |
+| 添加 fish 函数 | `kde-dotfiles/.config/fish/functions/<name>.fish` |
+| bobthefish 配色 | `kde-dotfiles/.config/fish/config.fish` 中 `theme_color_scheme` |
+| 加 `xf-*` 工具 | `kde-dotfiles/.local/bin/<name>` |
+| TUI 菜单项 | `kde-dotfiles/.local/bin/xynrin` 中 `MENU` 数组 |
 
 ---
 
@@ -220,46 +240,39 @@ tar -xzf ~/.config/.xynrin-backup/plasma-20260521-093045.tar.gz -C ~/.config/
 
 ```
 xynrin-fedora/
-├── install.sh                    # 主入口：FZF 菜单 + 步骤进度
-├── bootstrap.sh                  # 在线引导：拉仓库 → install.sh
-├── VERSION                       # 版本号（xf-help / self-update 用）
-├── applist-{common,kde}.txt      # 软件清单（FZF 多选数据源）
-├── docs/
-│   └── COMMANDS.md               # 命令速查（xf-help 数据源）
+├── install.sh                    # 主入口（7 步流程）
+├── bootstrap.sh                  # 在线引导（严格 Fedora 检测）
+├── VERSION                       # 版本号（release 时与 tag 校验）
+├── applist-{common,kde}.txt      # 软件清单
+├── docs/COMMANDS.md              # 命令速查文档
+├── .github/workflows/
+│   ├── ci.yml                    # ShellCheck + Fedora dry-run
+│   └── release.yml               # tag 触发，多架构打包发布
 ├── scripts/
-│   ├── 00-utils.sh               # 公共工具：UI / dnf_install / deploy_tree
+│   ├── 00-utils.sh               # 公共工具
 │   ├── 10-repos.sh               # RPM Fusion + Flathub
-│   ├── 15-cn-mirror.sh           # 自动切 TUNA（仅 CN 时区）
-│   ├── 20-kde-theme.sh           # KDE Plasma 美化
+│   ├── 15-cn-mirror.sh           # TUNA 镜像（仅 CN）
+│   ├── 20-kde-theme.sh           # 3 套主题方案选择
 │   ├── 30-fonts-cjk.sh           # 中文字体 + fcitx5
-│   ├── 40-terminal.sh            # fish + starship + xf-* 部署
+│   ├── 40-terminal.sh            # fish + bobthefish + Nerd Fonts
 │   ├── 50-apps.sh                # FZF 多选装软件
 │   ├── 60-gpu.sh                 # 显卡驱动
 │   └── 90-cleanup.sh             # 收尾
 └── kde-dotfiles/
-    ├── .config/
-    │   ├── fish/                 # fish 配置（conf.d/ + functions/）
-    │   ├── starship.toml
-    │   ├── fastfetch/config.jsonc
-    │   ├── fcitx5/{config,profile}
-    │   └── fontconfig/fonts.conf
-    └── .local/bin/               # xf-* 工具（部署到 ~/.local/bin）
-        ├── xf-help
-        ├── xf-self-update
-        ├── xf-update
-        ├── xf-clean
-        ├── xf-info
-        └── xf-theme
+    ├── .config/                  # fish / starship / fastfetch / fcitx5...
+    └── .local/bin/               # xynrin / up / xf-* 工具
 ```
 
 ---
 
 ## 📜 License
 
-[MIT](LICENSE)
+[GPL-v3](LICENSE)  ·  作者 **Xynrin** `<xynrin@163.com>`
 
 <div align="center">
 
 如果对你有用，给个 ⭐ 鼓励一下
+
+📖 [Wiki](https://github.com/Xynrin/xynrin-fedora/wiki) · 🐛 [Issues](https://github.com/Xynrin/xynrin-fedora/issues) · 📦 [Releases](https://github.com/Xynrin/xynrin-fedora/releases)
 
 </div>

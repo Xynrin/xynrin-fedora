@@ -13,16 +13,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Run shellcheck
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y shellcheck
-          # SC1091 = source 文件解析不到（运行时正确）；SC2086 已在代码里 disable
-          shellcheck --severity=warning --exclude=SC1091 \
+          # SC1091 = source 解析不到（运行时正确）
+          # SC2086 = 已在代码里 disable
+          # SC2155 = 不强制
+          shellcheck --severity=warning --exclude=SC1091,SC2155 \
             bootstrap.sh \
             install.sh \
-            scripts/*.sh
+            scripts/*.sh \
+            kde-dotfiles/.local/bin/up \
+            kde-dotfiles/.local/bin/xynrin \
+            kde-dotfiles/.local/bin/xf-*
+
+  fedora-detection:
+    name: Fedora 检测（非 Fedora 必须退出）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap on non-Fedora must fail
+        run: |
+          # bootstrap.sh 在 Ubuntu 上必须立即退出
+          if bash bootstrap.sh 2>&1 | tee /tmp/out.txt; then
+            echo "FAIL: bootstrap.sh 在非 Fedora 上没有退出"
+            exit 1
+          fi
+          grep -qi "仅支持 Fedora" /tmp/out.txt || { echo "FAIL: 未输出预期错误"; cat /tmp/out.txt; exit 1; }
+          echo "OK: bootstrap 在 Ubuntu 上正确拒绝运行"
 
   fedora-dryrun:
     name: Dry-run on Fedora ${{ matrix.fedora }}
@@ -39,23 +58,21 @@ jobs:
         run: |
           dnf install -y --setopt=install_weak_deps=False \
             git fzf rsync sudo findutils which procps-ng \
-            shadow-utils awk gawk pciutils
+            shadow-utils awk gawk pciutils curl
 
       - uses: actions/checkout@v4
 
-      - name: Create non-root user (脚本要求 UID 1000 普通用户)
+      - name: Create non-root user
         run: |
           useradd -m -u 1000 -s /bin/bash xynrin
-          # passwordless sudo
           echo 'xynrin ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/xynrin
           chmod 440 /etc/sudoers.d/xynrin
           chown -R xynrin:xynrin "$GITHUB_WORKSPACE"
 
-      - name: Verify Fedora version + dnf5 detection
+      - name: Verify Fedora detection
         run: |
           source /etc/os-release
           echo "OS: $PRETTY_NAME"
-          echo "VERSION_ID=$VERSION_ID"
           rpm -E %fedora
           which dnf5 || echo "no dnf5"
           which dnf  || echo "no dnf"
@@ -66,17 +83,20 @@ jobs:
             set -e
             cd '$GITHUB_WORKSPACE'
             export DRY_RUN=1
-            export XF_SKIP_CN_MIRROR=1   # CI 跑在境外，跳 TUNA 切换
+            export XF_SKIP_CN_MIRROR=1
+            export XF_NONINTERACTIVE=1
             chmod +x bootstrap.sh install.sh scripts/*.sh
+            chmod +x kde-dotfiles/.local/bin/*
             bash install.sh --all --dry-run
           "
 
-      - name: Run --only apps in dry-run（验证 FZF 默认选全部分支）
+      - name: Run --only apps in dry-run
         run: |
           su - xynrin -c "
             cd '$GITHUB_WORKSPACE'
             export DRY_RUN=1
             export XF_SKIP_CN_MIRROR=1
+            export XF_NONINTERACTIVE=1
             bash install.sh --only apps --dry-run
           "
 

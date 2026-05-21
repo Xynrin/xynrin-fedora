@@ -1,0 +1,132 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v1.0.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build tarball for ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            tag="${{ github.event.inputs.tag }}"
+          else
+            tag="${GITHUB_REF#refs/tags/}"
+          fi
+          version="${tag#v}"
+          echo "tag=$tag"         >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "VERSION 文件内容: $(cat VERSION)"
+          echo "Tag: $tag"
+
+      - name: Verify VERSION matches tag
+        run: |
+          file_ver=$(cat VERSION | tr -d '[:space:]')
+          tag_ver="${{ steps.ver.outputs.version }}"
+          if [[ "$file_ver" != "$tag_ver" ]]; then
+            echo "::error::VERSION ($file_ver) 与 tag ($tag_ver) 不一致"
+            exit 1
+          fi
+
+      - name: Build artifact
+        run: |
+          mkdir -p dist
+          art="xynrin-fedora-${{ steps.ver.outputs.version }}-${{ matrix.arch }}.tar.gz"
+          # 仅打包 Fedora 适配的运行时文件
+          tar -czf "dist/$art" \
+            --exclude=.git \
+            --exclude=.github \
+            --exclude=dist \
+            install.sh bootstrap.sh VERSION LICENSE README.md \
+            applist-common.txt applist-kde.txt \
+            scripts/ docs/ kde-dotfiles/ resources/
+          ls -lah dist/
+          # 校验和
+          ( cd dist && sha256sum "$art" > "$art.sha256" )
+          cat dist/*.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xynrin-fedora-${{ matrix.arch }}
+          path: dist/
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            tag="${{ github.event.inputs.tag }}"
+          else
+            tag="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -lah dist/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: ${{ steps.ver.outputs.tag }}
+          body: |
+            ## xynrin-fedora ${{ steps.ver.outputs.tag }}
+
+            Fedora 44 KDE 一键美化（仅适配 Fedora）。
+
+            ### 一键安装
+
+            ```bash
+            bash <(curl -fsSL https://raw.githubusercontent.com/Xynrin/xynrin-fedora/main/bootstrap.sh)
+            ```
+
+            ### 离线包
+
+            下面 `.tar.gz` 是离线安装包，按 Fedora 架构区分：
+
+            - `xynrin-fedora-*-x86_64.tar.gz`  — x86_64
+            - `xynrin-fedora-*-aarch64.tar.gz` — aarch64
+
+            解压后执行：
+
+            ```bash
+            tar -xzf xynrin-fedora-*-$(uname -m).tar.gz
+            cd xynrin-fedora-*
+            bash install.sh
+            ```
+
+            完整的更新日志请见 [Wiki](https://github.com/Xynrin/xynrin-fedora/wiki)。
+          files: |
+            dist/*.tar.gz
+            dist/*.sha256
+          generate_release_notes: true

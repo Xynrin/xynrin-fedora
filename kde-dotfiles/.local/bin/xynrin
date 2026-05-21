@@ -1,0 +1,246 @@
+#!/usr/bin/env bash
+# xynrin — xynrin-fedora 主 TUI（左列菜单 / 右栏说明，fzf 驱动）
+# 入口：终端输入 `xynrin` 即可
+# 功能：系统更新 / 软件安装 / 美化切换 / 美化卸载 / 恢复初始 / 系统信息 / 退出
+
+set -uo pipefail
+
+VERSION_FILE="$HOME/.config/xynrin-fedora/VERSION"
+BANNER_FILE="$HOME/.config/xynrin-fedora/banner.ansi"
+LOG_FILE="${XF_LOG_FILE:-/tmp/xynrin-fedora-install.log}"
+
+XF_VERSION="dev"
+[[ -f "$VERSION_FILE" ]] && XF_VERSION=$(<"$VERSION_FILE")
+
+C1='\033[38;5;141m'  # purple
+C2='\033[38;5;111m'  # blue
+C3='\033[38;5;117m'  # cyan
+C4='\033[38;5;156m'  # green
+C5='\033[38;5;216m'  # peach
+BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
+
+# ===== 缓存横幅（首次调用 oh-my-logo 生成，失败回落手写图形） =====
+ensure_banner() {
+    [[ -f "$BANNER_FILE" ]] && return 0
+    mkdir -p "$(dirname "$BANNER_FILE")"
+    if command -v npx >/dev/null 2>&1; then
+        if npx --yes oh-my-logo "xynrin-fedora" --color > "$BANNER_FILE" 2>/dev/null; then
+            return 0
+        fi
+    fi
+    cat > "$BANNER_FILE" <<EOF
+$(printf '\033[38;5;141m')██╗  ██╗██╗   ██╗███╗   ██╗██████╗ ██╗███╗   ██╗$(printf '\033[0m')
+$(printf '\033[38;5;111m')╚██╗██╔╝╚██╗ ██╔╝████╗  ██║██╔══██╗██║████╗  ██║$(printf '\033[0m')
+$(printf '\033[38;5;117m') ╚███╔╝  ╚████╔╝ ██╔██╗ ██║██████╔╝██║██╔██╗ ██║$(printf '\033[0m')
+$(printf '\033[38;5;156m') ██╔██╗   ╚██╔╝  ██║╚██╗██║██╔══██╗██║██║╚██╗██║$(printf '\033[0m')
+$(printf '\033[38;5;216m')██╔╝ ██╗   ██║   ██║ ╚████║██║  ██║██║██║ ╚████║$(printf '\033[0m')
+$(printf '\033[38;5;225m')╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝$(printf '\033[0m')
+                  $(printf '\033[1;36m')Fedora KDE 一键美化$(printf '\033[0m')
+EOF
+}
+
+show_banner() {
+    ensure_banner
+    clear
+    echo ""
+    if [[ -f "$BANNER_FILE" ]]; then
+        cat "$BANNER_FILE"
+    fi
+    echo -e "    ${DIM}v${XF_VERSION}${NC}  ${C1}·${NC}  作者 ${BOLD}Xynrin${NC} ${DIM}<xynrin@163.com>${NC}"
+    echo -e "    ${DIM}https://github.com/Xynrin/xynrin-fedora${NC}"
+    echo ""
+}
+
+# ===== 菜单项定义：ID|标题|说明（fzf 右栏） =====
+MENU=(
+    "update|系统更新|调用 ~/.local/bin/up：dnf upgrade --refresh + flatpak update + 清理旧内核\n建议每周跑一次，自动用最快镜像，进度条高亮显示"
+    "apps|软件安装|从 applist-common.txt + applist-kde.txt 中 fzf 多选\n包括浏览器/音视频/办公/通讯/开发，dnf 与 flatpak 自动分流"
+    "theme|美化切换|重新选择 KDE 主题套装（Layan / Sweet / Orchis）\n与 fish 主题，已应用的方案会用 ✓ 标注"
+    "uninstall|美化卸载|卸载已安装的 KDE 主题资源，恢复 Breeze 默认\n不会动用户数据，操作前会再次确认"
+    "restore|恢复初始|把 ~/.config/.xynrin-backup 中最近一次备份还原回去\n仅用于美化后没装其他软件 / 改其他配置的场景"
+    "info|系统信息|OS / 内核 / Plasma 版本 / 显卡 / 包数量 / 磁盘 / 内存\n贴 issue 时一键复制即可"
+    "self-update|脚本自更新|拉 GitHub 最新仓库，重新部署 dotfiles + xf 工具\n版本号变化会高亮，不会重装软件"
+    "help|命令速查|fzf TUI 浏览所有 xf-* / up / xynrin 命令的详细文档"
+    "exit|退出|离开 xynrin TUI"
+)
+
+render_preview() {
+    local id="$1"
+    for line in "${MENU[@]}"; do
+        IFS='|' read -r mid mtitle mdesc <<< "$line"
+        if [[ "$mid" == "$id" ]]; then
+            printf "${BOLD}${C3}%s${NC}\n\n" "$mtitle"
+            printf "${C5}id${NC}  ${DIM}%s${NC}\n\n" "$mid"
+            printf "${BOLD}说明${NC}\n%b\n" "$mdesc"
+            return
+        fi
+    done
+}
+
+run_action() {
+    local id="$1"
+    case "$id" in
+        update)
+            if command -v up >/dev/null 2>&1; then
+                exec up
+            else
+                echo "未找到 up，请先重新部署：xf-self-update"
+                read -r -p "回车返回菜单..." _
+            fi
+            ;;
+        apps)
+            local repo="${XF_TARGET_DIR:-/tmp/xynrin-fedora}"
+            if [[ ! -f "$repo/install.sh" ]]; then
+                echo "本地仓库缺失，先 xf-self-update 拉一份..."
+                xf-self-update --only apps
+            else
+                bash "$repo/install.sh" --only apps
+            fi
+            read -r -p "回车返回菜单..." _
+            ;;
+        theme)
+            local repo="${XF_TARGET_DIR:-/tmp/xynrin-fedora}"
+            if [[ ! -f "$repo/install.sh" ]]; then
+                xf-self-update --only kde-theme
+            else
+                bash "$repo/install.sh" --only kde-theme
+            fi
+            read -r -p "回车返回菜单..." _
+            ;;
+        uninstall)
+            confirm_uninstall && do_uninstall_themes
+            read -r -p "回车返回菜单..." _
+            ;;
+        restore)
+            do_restore_backup
+            read -r -p "回车返回菜单..." _
+            ;;
+        info)
+            if command -v xf-info >/dev/null 2>&1; then
+                xf-info
+            else
+                . /etc/os-release
+                echo "$PRETTY_NAME ($(uname -r))"
+            fi
+            echo ""
+            read -r -p "回车返回菜单..." _
+            ;;
+        self-update)
+            if command -v xf-self-update >/dev/null 2>&1; then
+                xf-self-update
+            else
+                echo "xf-self-update 不可用，请重新跑 install.sh"
+            fi
+            read -r -p "回车返回菜单..." _
+            ;;
+        help)
+            if command -v xf-help >/dev/null 2>&1; then
+                xf-help
+            else
+                echo "xf-help 不可用"
+                read -r -p "回车返回菜单..." _
+            fi
+            ;;
+        exit)
+            clear
+            echo "再见 ${BOLD}${C5}~${NC}"
+            exit 0
+            ;;
+    esac
+}
+
+confirm_uninstall() {
+    echo -e "${C5}!${NC} 将卸载已安装的主题包（layan-kde / sweet-kde / orchis-kde 等）"
+    echo -e "${DIM}  系统会还原到 Breeze 默认主题，用户数据不动${NC}"
+    read -r -p "$(echo -e "${C3}❯${NC} 继续? [y/N] ")" ans
+    [[ "${ans:-}" =~ ^[Yy]$ ]]
+}
+
+do_uninstall_themes() {
+    local pkgs=(
+        layan-kde layan-gtk-theme tela-icon-theme bibata-cursor-themes
+        sweet-kde sweet-icon-theme sweet-cursors
+        orchis-kde-theme colloid-icon-theme nordic-cursors
+    )
+    local present=()
+    for p in "${pkgs[@]}"; do
+        rpm -q "$p" >/dev/null 2>&1 && present+=("$p")
+    done
+    if [[ ${#present[@]} -eq 0 ]]; then
+        echo "未发现已安装的美化主题包，跳过"
+        return 0
+    fi
+    echo "将卸载: ${present[*]}"
+    if command -v dnf5 >/dev/null 2>&1; then sudo dnf5 remove -y "${present[@]}"; \
+    else sudo dnf remove -y "${present[@]}"; fi
+    if command -v plasma-apply-lookandfeel >/dev/null 2>&1; then
+        plasma-apply-lookandfeel -a org.kde.breeze.desktop || true
+    fi
+    echo "${C4}✓${NC} 已恢复 Breeze 默认主题"
+}
+
+do_restore_backup() {
+    local bak_dir="$HOME/.config/.xynrin-backup"
+    if [[ ! -d "$bak_dir" ]]; then
+        echo "未找到备份目录: $bak_dir"
+        return 1
+    fi
+    local latest
+    latest=$(ls -1t "$bak_dir"/plasma-*.tar.gz 2>/dev/null | head -1)
+    if [[ -z "$latest" ]]; then
+        echo "未找到 plasma 配置备份"
+        return 1
+    fi
+    echo "将还原备份: $latest"
+    read -r -p "$(echo -e "${C3}❯${NC} 继续? [y/N] ")" ans
+    [[ "${ans:-}" =~ ^[Yy]$ ]] || { echo "取消"; return 0; }
+    tar -xzf "$latest" -C "$HOME/.config/" && echo "${C4}✓${NC} 已还原"
+}
+
+main_menu() {
+    if ! command -v fzf >/dev/null 2>&1; then
+        echo "缺少 fzf，请先：sudo dnf install -y fzf" >&2
+        exit 1
+    fi
+
+    while true; do
+        show_banner
+        local items=()
+        for line in "${MENU[@]}"; do
+            IFS='|' read -r mid mtitle _ <<< "$line"
+            items+=("$(printf '%-12s\t%s' "$mid" "$mtitle")")
+        done
+
+        local choice
+        choice=$(printf '%s\n' "${items[@]}" | fzf \
+            --delimiter=$'\t' \
+            --with-nth=2 \
+            --layout=reverse \
+            --border=rounded \
+            --border-label="  xynrin v${XF_VERSION}  " \
+            --border-label-pos=3 \
+            --info=inline-right \
+            --prompt="❯ " \
+            --header="↑↓ 选择 · Enter 进入 · Esc/Ctrl-C 退出" \
+            --preview "bash $0 --preview {1}" \
+            --preview-window=right:55%:wrap \
+            --color="fg:#cdd6f4,bg:-1,hl:#f9e2af,fg+:#cdd6f4,bg+:#313244,hl+:#f9e2af" \
+            --color="info:#89b4fa,prompt:#cba6f7,pointer:#cba6f7,marker:#a6e3a1,spinner:#94e2d5" \
+            --color="header:#94e2d5,border:#cba6f7,label:#f5c2e7,preview-border:#585b70" \
+            --pointer="❯" \
+            --height=85%) || { clear; exit 0; }
+
+        [[ -z "$choice" ]] && { clear; exit 0; }
+        local id
+        id=$(echo "$choice" | cut -f1 | xargs)
+        run_action "$id"
+    done
+}
+
+# preview 子调用
+if [[ "${1:-}" == "--preview" ]]; then
+    render_preview "${2:-}"
+    exit 0
+fi
+
+main_menu
