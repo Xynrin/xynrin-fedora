@@ -9,6 +9,11 @@ export SETUP_DIR SCRIPTS_DIR
 export DRY_RUN=0
 ONLY=""
 
+# 版本号（VERSION 文件，xf-help / xf-self-update 也读这个）
+XF_VERSION="dev"
+[[ -f "$SETUP_DIR/VERSION" ]] && XF_VERSION=$(<"$SETUP_DIR/VERSION")
+export XF_VERSION
+
 # shellcheck source=scripts/00-utils.sh
 source "$SCRIPTS_DIR/00-utils.sh"
 
@@ -63,7 +68,7 @@ show_banner() {
     echo ""
     echo -e "${C1}    ╭───────────────────────────────────────────────────────╮${NC}"
     echo -e "${C1}    │${NC}                                                       ${C1}│${NC}"
-    echo -e "${C1}    │${NC}     ${C2}╳${C3}╳ ${BOLD}xynrin-fedora${NC}                                ${C1}│${NC}"
+    echo -e "${C1}    │${NC}     ${C2}╳${C3}╳ ${BOLD}xynrin-fedora${NC} ${DIM}v${XF_VERSION}${NC}                          ${C1}│${NC}"
     echo -e "${C1}    │${NC}     ${DIM}Fedora KDE 一键美化 · fish / starship / cjk${NC}      ${C1}│${NC}"
     echo -e "${C1}    │${NC}                                                       ${C1}│${NC}"
     echo -e "${C1}    ╰───────────────────────────────────────────────────────╯${NC}"
