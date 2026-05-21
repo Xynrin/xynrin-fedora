@@ -2,10 +2,20 @@
   xynrin-fedora — Fedora 44 KDE 使用速查
 ==========================================
 
+🚀 不知道有什么命令？先跑：
+
+      xf-help
+
+  这是一个 fzf 驱动的 TUI，左边列表，右边详细说明。
+  支持搜索、Enter 直接执行、Ctrl-Y 复制命令名。
+  完整文档：~/.config/xynrin-fedora/COMMANDS.md
+
+
 ✨ 你刚刚装了什么
   • RPM Fusion free/nonfree 源 + Flathub
-  • 你选中的：KDE 主题 / 中文字体+输入法 / 终端美化 / 常用软件 / 显卡驱动
+  • 你选中的：KDE 主题 / 中文字体+输入法 / 终端美化 / 常用软件
   • ~/.local/bin 里几个 xf-* 工具脚本
+  • ~/.config/xynrin-fedora/ 放了 VERSION 和命令文档
 
 🎨 KDE 主题
   系统设置 → 全局主题 / 颜色 / 图标 随时切换
@@ -26,19 +36,22 @@
   自定义：~/.config/fish/conf.d/*.fish     函数：~/.config/fish/functions/*.fish
   换回 bash： chsh -s /bin/bash
 
-🛠️ ~/.local/bin 常用命令
-  xf-update     一把梭：dnf + flatpak + 固件
-  xf-clean      清理：autoremove + journal + flatpak unused + ~/.cache 报告
-  xf-info       系统状态摘要
-  xf-theme      切深色 / 浅色
+🛠️ ~/.local/bin 常用命令（详细：xf-help）
+  xf-help        TUI 命令速查（推荐先跑这个！）
+  xf-self-update 拉最新仓库重部署 dotfiles（升级首选）
+  xf-update      一把梭：dnf + flatpak + 固件
+  xf-clean       清理：autoremove + journal + flatpak unused
+  xf-info        系统状态摘要
+  xf-theme       切深色 / 浅色
 
 📦 装更多软件
   再跑一次： cd /tmp/xynrin-fedora && ./install.sh --only apps
   或手动：   sudo dnf install XXX   /  flatpak install flathub XXX
 
 🐛 出问题了
-  日志在： /tmp/xynrin-fedora-install.log
-  没装成功的软件：~/Documents/xynrin-fedora-install-failed.txt
+  日志：    /tmp/xynrin-fedora-install.log
+  失败软件：~/Documents/xynrin-fedora-install-failed.txt
+  贴 issue 时先跑 xf-info 复制输出
   GitHub Issues： https://github.com/Xynrin/xynrin-fedora/issues
 
 📌 Fedora 44 小提示
