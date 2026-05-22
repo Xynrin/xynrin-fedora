@@ -1,3 +1,4 @@
+![logo](images/logo.png)
 <div align="center">
 
 <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=42&duration=3500&pause=600&color=CBA6F7&center=true&vCenter=true&width=600&lines=xynrin-fedora;Fedora+44+KDE+%E4%B8%80%E9%94%AE%E7%BE%8E%E5%8C%96;%E5%B0%8F%E7%99%BD+%C2%B7+%E5%8F%8B%E5%A5%BD" alt="title" />
