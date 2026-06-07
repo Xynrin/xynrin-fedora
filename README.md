@@ -22,7 +22,7 @@
 ## ✨ 一键安装
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/Xynrin/xynrin-fedora/main/bootstrap.sh)
+curl -fsSL xynrin.xo.je/xynrin-fedora | bash
 ```
 
 > [!IMPORTANT]
